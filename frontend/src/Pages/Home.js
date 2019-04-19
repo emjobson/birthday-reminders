@@ -3,15 +3,24 @@ import React, { Component } from "react";
 export default class Home extends Component {
   constructor(props) {
     super(props);
-    this.state = { phoneNumber: "" };
+    this.state = { phoneNumber: "", birthdayFile: null };
   }
 
-  handleInput(evt) {
-    this.setState({ phoneNumber: evt.target.value });
-  }
+  readFileAsText = async file => {
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onerror = () => {
+        reader.abort();
+        reject(new DOMException("Problem parsing file."));
+      };
+      reader.onload = () => {
+        resolve(reader.result);
+      };
+      reader.readAsText(file);
+    });
+  };
 
   render() {
-    //  debugger;
     return (
       <div>
         <div>
@@ -22,8 +31,6 @@ export default class Home extends Component {
         <input
           type="text"
           onChange={evt => this.setState({ phoneNumber: evt.target.value })}
-          //  onChange={evt => this.handleInput(evt)} // arrow function binds "this" in handleInput to Home's context, same as above
-          //  onChange={this.handleInput} // this will fail (cannot read property setState of undefined, context of callback is input)
           value={this.state.phoneNumber || ""}
           className="form-control"
           placeholder="Phone #"
@@ -35,6 +42,19 @@ export default class Home extends Component {
               type="file"
               className="custom-file-input"
               id="inputGroupFile02"
+              accept=".ics"
+              onChange={async evt => {
+                console.log(">>>files", evt.target.files[0]);
+                this.setState({ birthdayFile: evt.target.files[0] });
+                try {
+                  const fileTxt = await this.readFileAsText(
+                    evt.target.files[0]
+                  );
+                  console.log(">>>myFile", fileTxt); // goal for Friday: finish file upload/parsing
+                } catch (e) {
+                  console.warn(e.message);
+                }
+              }}
             />
             <label
               className="custom-file-label"
@@ -49,6 +69,9 @@ export default class Home extends Component {
               Upload
             </button>
           </div>
+        </div>
+        <div>
+          Your files: {this.state.birthdayFile && this.state.birthdayFile.name}
         </div>
       </div>
     );
