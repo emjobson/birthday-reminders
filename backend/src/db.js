@@ -8,7 +8,7 @@ const TEST_DB = "app_test_database";
 exports.MODE_TEST = "mode_test";
 exports.MODE_PRODUCTION = "mode_production";
 
-var state = {
+const state = {
   pool: null,
   mode: null
 };
@@ -16,7 +16,7 @@ var state = {
 exports.connect = function(mode, done) {
   state.pool = mysql.createPool({
     host: "localhost",
-    user: "user_placeholder",
+    user: "elliott",
     password: "password",
     database: mode === exports.MODE_PRODUCTION ? PRODUCTION_DB : TEST_DB
   });
@@ -26,28 +26,29 @@ exports.connect = function(mode, done) {
   state.pool.query(
     //conn.query(
     "CREATE TABLE IF NOT EXISTS Users(" +
-      "userID int not null auto_increment primary key," +
-      "email varchar not null," +
-      "preferences varchar)",
+      "userID int not null AUTO_INCREMENT," +
+      "email varchar(255) not null," +
+      "preferences varchar(255)," +
+      "PRIMARY KEY (userID));",
     function(err, result) {
       if (err) {
         throw err;
       }
-      console.log("created Users table");
     }
   );
   state.pool.query(
     //  conn.query(
     "CREATE TABLE IF NOT EXISTS Friends(" +
-      "friendID int not null auto_increment primary key," +
-      "name varchar," +
+      "friendID int not null AUTO_INCREMENT," +
+      "name varchar(255) not null," +
       "birthday char(4)," +
-      "foreign key (userID) references Users (userID))",
+      "userID int not null," +
+      "foreign key (userID) references Users (userID)," +
+      "PRIMARY KEY (friendID));",
     function(err, result) {
       if (err) {
         throw err;
       }
-      console.log("created Friends table");
     }
   );
   done();

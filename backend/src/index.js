@@ -16,6 +16,10 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(morgan("combined"));
 
+db.connect(MODE, function() {
+  console.log("connected to db");
+});
+
 /*
 // retrieve all birthdays
 app.get("/", (req, res) => {
@@ -61,13 +65,14 @@ app.post("/", checkJwt, (req, res) => {
 app.post("/users", (req, res) => {
   // TODO: checkJwt makes endpoint only available to authenticated users --> do I want it here?
   const { email, preferences } = req.body;
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
   const query =
     "INSERT INTO Users (email, preferences) VALUES (" +
-    email +
+    quotesOrNULL(email) +
     ", " +
-    preferences +
+    quotesOrNULL(preferences) +
     ");";
+  console.log(">>>query", query);
   pool.query(query, (err, result) => {
     if (err) {
       res.status(500).send(); // 500: internal server error
@@ -87,8 +92,12 @@ app.post("/users", (req, res) => {
 app.get("/users/:email/preferences", (req, res) => {
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
-  const query = "SELECT preferences FROM Users WHERE " + "email=" + email + ";";
+  const pool = db.get();
+  const query =
+    "SELECT preferences FROM Users WHERE " +
+    "email=" +
+    quotesOrNULL(email) +
+    ";";
 
   pool.query(query, (err, result) => {
     if (err) {
@@ -111,12 +120,12 @@ app.put("/users/:email/preferences", (req, res) => {
   const { preferences } = req.body;
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
   const query =
     "UPDATE Users SET preferences=" +
-    preferences +
+    quotesOrNULL(preferences) +
     " WHERE email=" +
-    email +
+    quotesOrNULL(email) +
     ";";
   pool.query(query, (err, result) => {
     if (err) {
@@ -138,11 +147,11 @@ app.put("/users/:email/preferences", (req, res) => {
 app.delete("/users/:email", (req, res) => {
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
 
   // look up userID
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + email + ";",
+    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email) + ";",
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -150,14 +159,15 @@ app.delete("/users/:email", (req, res) => {
       }
       const userID = result;
       // delete entry in User table
-      let query = "DELETE FROM Users WHERE email=" + email + ";";
+      let query = "DELETE FROM Users WHERE email=" + quotesOrNULL(email) + ";";
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
           throw err;
         }
         // delete from Friends table
-        query = "DELETE FROM Friends WHERE userID=" + userID + ";";
+        query =
+          "DELETE FROM Friends WHERE userID=" + quotesOrNULL(userID) + ";";
         pool.query(query, (err, result) => {
           if (err) {
             res.status(500).send();
@@ -181,10 +191,10 @@ app.post("/users/:email/friends", (req, res) => {
   const { friends } = req.body;
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
 
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + email + ";",
+    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email) + ";",
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -203,7 +213,9 @@ app.post("/users/:email/friends", (req, res) => {
           (i < names.length - 1 ? "), " : ")");
       }
       const query =
-        "INSERT INTO Friends(name, birthday, userID) VALUES " + values + ";";
+        "INSERT INTO Friends(name, birthday, userID) VALUES " +
+        quotesOrNULL(values) +
+        ";";
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
@@ -225,27 +237,30 @@ app.get("/users/:email/friends", (req, res) => {
   const { date } = req.body; // if unspecified, return all friends
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
 
-  pool.query("SELECT userID FROM Users WHERE email=" + email, (err, result) => {
-    if (err) {
-      res.status(500).send();
-      throw err;
-    }
-    const userID = result;
-    const query =
-      "SELECT name, birthday FROM Friends WHERE userID=" +
-      userID +
-      (date && " AND birthday=" + date) +
-      ";";
-    pool.query(query, (err, result) => {
+  pool.query(
+    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email),
+    (err, result) => {
       if (err) {
         res.status(500).send();
         throw err;
       }
-      res.send(result);
-    });
-  });
+      const userID = result;
+      const query =
+        "SELECT name, birthday FROM Friends WHERE userID=" +
+        quotesOrNULL(userID) +
+        (date && " AND birthday=" + quotesOrNULL(date)) +
+        ";";
+      pool.query(query, (err, result) => {
+        if (err) {
+          res.status(500).send();
+          throw err;
+        }
+        res.send(result);
+      });
+    }
+  );
 });
 
 /*
@@ -259,7 +274,7 @@ app.get("/users/:email/friends", (req, res) => {
 app.put("/users/:email/friends", (req, res) => {
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
 });
 
 /*
@@ -272,36 +287,43 @@ app.delete("/users/:email/friends", (req, res) => {
   const { names } = req.body;
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.connect(MODE, () => {});
+  const pool = db.get();
 
-  pool.query("SELECT userID FROM Users WHERE email=" + email, (err, result) => {
-    if (err) {
-      res.status(500).send();
-      throw err;
-    }
-    const userID = result;
-    const namesStr = "(" + names.slice(1, names.length - 1) + ")";
-    const query = // TODO: is this too slow?
-      "DELETE FROM Friends WHERE userID=" +
-      userID +
-      " AND name IN" +
-      namesStr +
-      ";";
-
-    pool.query(query, (err, result) => {
+  pool.query(
+    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email),
+    (err, result) => {
       if (err) {
         res.status(500).send();
         throw err;
       }
-      res.status(200).send();
-    });
-  });
+      const userID = result;
+      const namesStr = "(" + names.slice(1, names.length - 1) + ")";
+      const query = // TODO: is this too slow?
+        "DELETE FROM Friends WHERE userID=" +
+        quotesOrNULL(userID) +
+        " AND name IN" +
+        quotesOrNULL(namesStr) +
+        ";";
+
+      pool.query(query, (err, result) => {
+        if (err) {
+          res.status(500).send();
+          throw err;
+        }
+        res.status(200).send();
+      });
+    }
+  );
 });
 
 // start server
 app.listen(8081, () => {
   console.log("listening on port 8081");
 });
+
+function quotesOrNULL(str) {
+  return str ? "'" + str + "'" : "NULL";
+}
 
 /*
  * NOTES:
