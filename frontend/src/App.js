@@ -4,6 +4,8 @@ import { Route, withRouter } from "react-router-dom";
 import Callback from "./Pages/Callback";
 import Home from "./Pages/Home";
 import auth0Client from "./Auth";
+import SecuredRoute from "./SecuredRoute";
+import ManageBirthdays from "./Pages/ManageBirthdays";
 
 class App extends Component {
   constructor(props) {
@@ -33,7 +35,11 @@ class App extends Component {
         <NavBar />
         <Route exact path="/" component={Home} />
         <Route exact path="/callback" component={Callback} />
-        {/* <SecuredRoute path='/new-question' component={NewQuestion} checkingSession={this.state.checkingSession} /> */}
+        <SecuredRoute
+          path="/manage"
+          component={ManageBirthdays}
+          checkingSession={this.state.checkingSession}
+        />
       </div>
     );
   }
