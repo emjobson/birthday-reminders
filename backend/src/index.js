@@ -20,14 +20,6 @@ db.connect(MODE, function() {
   console.log("connected to db");
 });
 
-/*
-// retrieve all birthdays
-app.get("/", (req, res) => {
-  const bdays = Object.keys(tempBirthdayDB).map(user => tempBirthdayDB[user]);
-  res.send(bdays);
-});
-*/
-
 const checkJwt = jwt({
   secret: jwksRsa.expressJwtSecret({
     cache: true,
@@ -44,15 +36,13 @@ const checkJwt = jwt({
   algorithms: ["RS256"]
 });
 
-/*
-// add a new user and birthday
+// HOW TO USE checkJwt
 app.post("/", checkJwt, (req, res) => {
   // checkJwt an express middleware that validates ID tokens
   const { id, bday } = req.body;
   tempBirthdayDB[id] = bday;
   res.status(200).send();
 });
-*/
 
 // API endpoints
 
@@ -60,6 +50,10 @@ app.post("/", checkJwt, (req, res) => {
  * Create User
  *
  * Updates database User table by adding a user (string email) with specified preferences.
+ *
+ * Body:
+ *  email: string
+ *  preferences: stringified preferences object
  */
 
 app.post("/users", (req, res) => {
@@ -115,6 +109,9 @@ app.get("/users/:email/preferences", (req, res) => {
  *
  * Takes in a user and a JSON object of the user's preferences, updating the User
  * table by replacing the old preferences with the new preferences for the given user.
+ *
+ * Body:
+ *  preferences: JSON stringified preferences object
  */
 
 app.put("/users/:email/preferences", (req, res) => {
@@ -190,10 +187,14 @@ app.delete("/users/:email", (req, res) => {
  *
  * Updates the Friends table by adding all the entries in the friends object (friendName -> bday)
  * for the given user.
+ *
+ * Body:
+ *  friends: JSON obj mapping name --> birthday (4 char string, MMDD)
  */
 
 app.post("/users/:email/friends", (req, res) => {
   const { friends } = req.body;
+  console.log(">>>friends:", friends);
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
   const pool = db.get();
@@ -205,22 +206,21 @@ app.post("/users/:email/friends", (req, res) => {
         res.status(500).send();
         throw err;
       }
+      const userID = result[0].userID;
       const names = Object.keys(friends);
       let values = "";
       for (let i = 0; i < names.length; i++) {
         values +=
           "(" +
-          names[i] +
+          quotesOrNULL(names[i]) +
           ", " +
-          friends[names[i]] +
+          quotesOrNULL(friends[names[i]]) +
           ", " +
-          result +
+          userID +
           (i < names.length - 1 ? "), " : ")");
       }
       const query =
-        "INSERT INTO Friends(name, birthday, userID) VALUES " +
-        quotesOrNULL(values) +
-        ";";
+        "INSERT INTO Friends(name, birthday, userID) VALUES " + values + ";";
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
@@ -237,6 +237,9 @@ app.post("/users/:email/friends", (req, res) => {
  * Get Friends
  *
  * For the given user, perform lookup in the Friends table to get all friends or friends for a specific date.
+ *
+ * Body:
+ *  date: string date, can be null or undefined if no date desired
  */
 
 app.get("/users/:email/friends", (req, res) => {
@@ -252,11 +255,11 @@ app.get("/users/:email/friends", (req, res) => {
         res.status(500).send();
         throw err;
       }
-      const userID = result;
+      const userID = result[0].userID;
       const query =
         "SELECT name, birthday FROM Friends WHERE userID=" +
         quotesOrNULL(userID) +
-        (date && " AND birthday=" + quotesOrNULL(date)) +
+        (date ? " AND birthday=" + quotesOrNULL(date) : "") +
         ";";
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
@@ -264,7 +267,8 @@ app.get("/users/:email/friends", (req, res) => {
           res.status(500).send();
           throw err;
         }
-        res.send(result);
+        console.log(">>>result:", result);
+        res.send(result); // TODO: come back to this and reformat after testing with 1 or more friends
       });
     }
   );
@@ -288,10 +292,13 @@ app.put("/users/:email/friends", (req, res) => {
  * Delete Friends
  *
  * For the given user, remove entries in Friends specified by the array of friend names.
+ *
+ * Body:
+ *  names: array of string names
  */
 
 app.delete("/users/:email/friends", (req, res) => {
-  const { names } = req.body;
+  const { names } = req.body; // assuming "names" arr in body is non-empty
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
   const pool = db.get();
@@ -303,13 +310,15 @@ app.delete("/users/:email/friends", (req, res) => {
         res.status(500).send();
         throw err;
       }
-      const userID = result;
-      const namesStr = "(" + names.slice(1, names.length - 1) + ")";
+      const userID = result[0].userID;
+      const namesStringified = JSON.stringify(names);
+      const namesStr =
+        "(" + namesStringified.slice(1, namesStringified.length - 1) + ")";
       const query = // TODO: is this too slow?
         "DELETE FROM Friends WHERE userID=" +
         quotesOrNULL(userID) +
         " AND name IN" +
-        quotesOrNULL(namesStr) +
+        namesStr +
         ";";
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
@@ -335,6 +344,7 @@ function quotesOrNULL(str) {
 /*
  * ASSUMPTIONS:
  * 1. browser protects db from duplicate emails
+ * 2. names array in delete friends is non-empty
  *
  * NOTES:
  *
