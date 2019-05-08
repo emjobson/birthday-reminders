@@ -72,7 +72,7 @@ app.post("/users", (req, res) => {
     ", " +
     quotesOrNULL(preferences) +
     ");";
-  console.log(">>>query", query);
+  console.log(">>>query:", query);
   pool.query(query, (err, result) => {
     if (err) {
       res.status(500).send(); // 500: internal server error
@@ -98,14 +98,15 @@ app.get("/users/:email/preferences", (req, res) => {
     "email=" +
     quotesOrNULL(email) +
     ";";
-
+  console.log(">>>query:", query);
   pool.query(query, (err, result) => {
     if (err) {
       res.status(500).send(); // 500: internal server error
       throw err;
     }
     console.log("queried Users for preferences for " + email);
-    res.send(result);
+    console.log(">>>preferences:", result[0].preferences);
+    res.send(result[0].preferences); // assuming browser protects from duplicate emails, see below
   });
 });
 
@@ -127,6 +128,7 @@ app.put("/users/:email/preferences", (req, res) => {
     " WHERE email=" +
     quotesOrNULL(email) +
     ";";
+  console.log(">>>query:", query);
   pool.query(query, (err, result) => {
     if (err) {
       res.status(500).send(); // 500: internal server error
@@ -146,7 +148,7 @@ app.put("/users/:email/preferences", (req, res) => {
 
 app.delete("/users/:email", (req, res) => {
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const email = uriParsed[uriParsed.length - 1];
   const pool = db.get();
 
   // look up userID
@@ -157,9 +159,11 @@ app.delete("/users/:email", (req, res) => {
         res.status(500).send();
         throw err;
       }
-      const userID = result;
+      const userID = result[0].userID;
+      console.log(">>>userID:", userID);
       // delete entry in User table
       let query = "DELETE FROM Users WHERE email=" + quotesOrNULL(email) + ";";
+      console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
@@ -168,6 +172,7 @@ app.delete("/users/:email", (req, res) => {
         // delete from Friends table
         query =
           "DELETE FROM Friends WHERE userID=" + quotesOrNULL(userID) + ";";
+        console.log(">>>query:", query);
         pool.query(query, (err, result) => {
           if (err) {
             res.status(500).send();
@@ -216,6 +221,7 @@ app.post("/users/:email/friends", (req, res) => {
         "INSERT INTO Friends(name, birthday, userID) VALUES " +
         quotesOrNULL(values) +
         ";";
+      console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
@@ -252,6 +258,7 @@ app.get("/users/:email/friends", (req, res) => {
         quotesOrNULL(userID) +
         (date && " AND birthday=" + quotesOrNULL(date)) +
         ";";
+      console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
@@ -304,7 +311,7 @@ app.delete("/users/:email/friends", (req, res) => {
         " AND name IN" +
         quotesOrNULL(namesStr) +
         ";";
-
+      console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
@@ -326,6 +333,9 @@ function quotesOrNULL(str) {
 }
 
 /*
+ * ASSUMPTIONS:
+ * 1. browser protects db from duplicate emails
+ *
  * NOTES:
  *
  * pool.query() shorthand for pool.getConnection() + connection.query() + connection.release()
