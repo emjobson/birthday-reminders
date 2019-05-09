@@ -1,10 +1,10 @@
 import React, { Component } from "react";
-import NavBar from "./NavBar";
+import NavBar from "./Components/NavBar";
 import { Route, withRouter } from "react-router-dom";
 import Callback from "./Pages/Callback";
 import Home from "./Pages/Home";
 import auth0Client from "./Auth";
-import SecuredRoute from "./SecuredRoute";
+import SecuredRoute from "./Components/SecuredRoute";
 import ManageBirthdays from "./Pages/ManageBirthdays";
 
 class App extends Component {

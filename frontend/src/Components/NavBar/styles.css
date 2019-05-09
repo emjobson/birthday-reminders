@@ -1,0 +1,19 @@
+:local(.scrollLink) {
+  margin: 3px;
+  cursor: pointer;
+}
+
+:local(.scrollLink:hover) {
+  color: white;
+}
+
+:local(.newPageLink) {
+  margin: 3px;
+  font-size: 1rem;
+  color: #212529;
+}
+
+:local(.newPageLink:hover) {
+  color: white;
+  cursor: pointer;
+}
