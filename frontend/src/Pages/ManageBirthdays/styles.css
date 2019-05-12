@@ -1,7 +1,9 @@
 :local(.uploadedBirthdays) {
-  height: 400px;
-  width: 400px;
+  display: inline-block;
+  height: 350px;
+  width: 350px;
   overflow: auto;
   border: 1px solid black;
   margin: 0.5em;
+  margin-bottom: 0;
 }

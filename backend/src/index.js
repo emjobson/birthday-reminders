@@ -78,6 +78,36 @@ app.post("/users", (req, res) => {
 });
 
 /*
+ * Get User
+ *
+ * Looks up and returns friends and preferences for the given user.
+ *
+ * TODO: test this with Postman
+ */
+
+app.get("/users/:email", (req, res) => {
+  const uriParsed = req.path.split("/");
+  const email = uriParsed[uriParsed.length - 2];
+  const pool = db.get();
+  const query =
+    "SELECT friends, preferences FROM Users WHERE " +
+    "email=" +
+    quotesOrNULL(email) +
+    ";";
+  console.log(">>>query:", query);
+  pool.query(query, (err, result) => {
+    if (err) {
+      res.status(500).send(); // 500: internal server error
+      throw err;
+    }
+    console.log("queried Users table for friends and preferences for " + email);
+    console.log(">>>friends", result[0].friends);
+    console.log(">>>preferences:", result[0].preferences);
+    res.send(result[0]); // assuming browser protects from duplicate emails, see below
+  });
+});
+
+/*
  * Get Preferences
  *
  * Looks up and returns preferences for the given user.
@@ -224,7 +254,7 @@ app.post("/users/:email/friends", (req, res) => {
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
-          console.log('>>>addFriends err', err)
+          console.log(">>>addFriends err", err);
           res.status(500).send();
           throw err;
         }

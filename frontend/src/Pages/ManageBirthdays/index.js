@@ -3,27 +3,41 @@ import { parseICal } from "../../utils";
 import Section from "../../Components/Section";
 import styles from "./styles.css";
 import auth0Client from "../../Auth";
-import { addFriends, getFriends } from "../../API/friends";
+import {
+  addFriends,
+  getFriends,
+  updatePreferences,
+  getPreferences
+} from "../../API/friends";
+import * as _ from "lodash";
 
 export default class ManageBirthdays extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      phoneNumber: "",
       birthdayFile: null,
       stagedBirthdays: {},
-      uploadedBirthdays: {}
+      uploadedBirthdays: {},
+      stagedPreferences: { phoneNumber: "" },
+      uploadedPreferences: {}
     };
   }
 
-  async componentDidMount() {
-    const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
-    if (uploadedBirthdays.data) {
-      this.setState({
-        uploadedBirthdays: unpackServerBirthdays(uploadedBirthdays.data)
-      });
-    }
+  componentDidMount() {
+    this.syncUser();
   }
+
+  syncUser = async () => {
+    const uploadedPreferences = await getPreferences(
+      auth0Client.getProfile().name
+    );
+    const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
+    this.setState({
+      uploadedPreferences: uploadedPreferences,
+      uploadedBirthdays: uploadedBirthdays,
+      stagedPreferences: { phoneNumber: uploadedPreferences.phoneNumber || "" }
+    });
+  };
 
   readFileAsText = async file => {
     const reader = new FileReader();
@@ -39,8 +53,28 @@ export default class ManageBirthdays extends Component {
     });
   };
 
+  handleSubmit = async () => {
+    // TODO: handle upload errors
+    const email = auth0Client.getProfile().name;
+    await updatePreferences(email, this.state.stagedPreferences);
+
+    const newFriends = _.reduce(
+      this.state.stagedBirthdays,
+      (result, bday, name) => {
+        if (!(name in this.state.uploadedBirthdays)) {
+          result[name] = bday;
+        }
+        return result;
+      },
+      {}
+    );
+    if (!_.isEmpty(newFriends)) {
+      await addFriends(email, newFriends);
+    }
+    this.syncUser();
+  };
+
   render() {
-    console.log(">>>uploadedBirthdays", this.state.uploadedBirthdays);
     return (
       <div>
         <Section title="Instructions" id="instructions">
@@ -57,15 +91,71 @@ export default class ManageBirthdays extends Component {
           <div>instructions go here</div>
         </Section>
         <Section title="Getting Started" id="getting-started">
-          <div>
+          <div style={{ marginBottom: "2em" }}>
             Never forget a friend's birthday again! Grab the .ics file of your
             friends' birthdays from Facebook, upload it below, and we'll handle
             the rest.
           </div>
           <div>
+            Your saved phone number:{" "}
+            {(this.state.uploadedPreferences &&
+              this.state.uploadedPreferences.phoneNumber) ||
+              "None stored on server."}
+          </div>
+          <div>
+            Click the submit button to save your number and the following
+            birthdays:
+          </div>
+          <div>
+            <span className={styles.uploadedBirthdays}>
+              {Array.from(
+                new Set([
+                  ...Object.keys(this.state.stagedBirthdays),
+                  ...Object.keys(this.state.uploadedBirthdays)
+                ])
+              )
+                .sort()
+                .map((name, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "block",
+                      marginLeft: ".5em",
+                      color:
+                        name in this.state.stagedBirthdays &&
+                        !(name in this.state.uploadedBirthdays)
+                          ? "green"
+                          : "black"
+                    }}
+                  >{`${name}: ${convertedBdayString(
+                    this.state.stagedBirthdays[name] ||
+                      this.state.uploadedBirthdays[name]
+                  )}`}</div>
+                ))}
+            </span>
             <span
               style={{
-                color: this.state.phoneNumber.length === 10 ? "green" : "red"
+                border: "1px solid black",
+                display: "inline-block",
+                width: "200px"
+              }}
+            >
+              <div style={{ marginLeft: ".25em" }}>Key:</div>
+              <ul style={{ marginBottom: ".25em" }}>
+                <li style={{ color: "green" }}>birthday to add</li>
+                <li style={{ color: "red" }}>birthday to delete</li>
+                <li style={{ color: "black" }}>no change</li>
+              </ul>
+            </span>
+          </div>
+
+          <div style={{ marginLeft: ".5em" }}>
+            <span
+              style={{
+                color:
+                  this.state.stagedPreferences.phoneNumber.length === 10
+                    ? "green"
+                    : "red"
               }}
             >
               *
@@ -82,21 +172,23 @@ export default class ManageBirthdays extends Component {
               onChange={evt => {
                 const ch = evt.target.value.charAt(evt.target.value.length - 1);
                 if (
-                  evt.target.value.length > this.state.phoneNumber.length &&
+                  evt.target.value.length >
+                    this.state.stagedPreferences.phoneNumber.length &&
                   (ch < "0" || ch > "9")
                 ) {
                   return;
                 }
-                this.setState({ phoneNumber: evt.target.value });
+                this.setState({
+                  stagedPreferences: { phoneNumber: evt.target.value }
+                });
               }}
-              value={this.state.phoneNumber || ""}
+              value={this.state.stagedPreferences.phoneNumber}
               className="form-control"
               placeholder="Phone #"
               aria-label="phone_number"
             />
           </div>
-
-          <div className="input-group mb-3">
+          <div className="input-group" style={{ marginLeft: ".5em" }}>
             <span style={{ color: this.state.birthdayFile ? "green" : "red" }}>
               *
             </span>
@@ -138,19 +230,15 @@ export default class ManageBirthdays extends Component {
               </div>
             </div>
           </div>
-          <div style={{ width: "400px", margin: "1em" }}>
+          <div style={{ width: "400px", margin: ".5em", marginLeft: "1.5em" }}>
             <button
               style={{ borderRadius: ".25rem" }}
               disabled={
-                !this.state.birthdayFile || this.state.phoneNumber.length !== 10
+                this.state.stagedPreferences.phoneNumber.length !== 10 ||
+                _.isEmpty(this.state.stagedBirthdays)
               } // TODO: enabled if valid phone number and valid birthday file in form
-              onClick={async () => {
-                // TODO: send to server if validation was successful
-                const resp = await addFriends(
-                  auth0Client.getProfile().name,
-                  this.state.stagedBirthdays
-                ); // TODO: indicate success
-                console.log(">>>resp", resp);
+              onClick={() => {
+                this.handleSubmit();
               }}
             >
               Submit
@@ -158,43 +246,14 @@ export default class ManageBirthdays extends Component {
             <button
               style={{ borderRadius: ".25rem" }}
               onClick={() => {
-                this.setState({ phoneNumber: "", birthdayFile: null });
+                this.setState({
+                  stagedPreferences: { phoneNumber: "" },
+                  birthdayFile: null
+                });
               }}
             >
               Clear
             </button>
-          </div>
-          <div>
-            Your phone number: {this.state.phoneNumber || "Not entered."}
-          </div>
-          <div>
-            Click the submit button to save your number and the following
-            birthdays:
-          </div>
-          <div className={styles.uploadedBirthdays}>
-            {[
-              ...Object.keys(this.state.stagedBirthdays),
-              ...Object.keys(this.state.uploadedBirthdays)
-            ]
-              .sort()
-              .map((name, idx) => (
-                <div
-                  key={idx}
-                  style={{ marginLeft: ".5em" }}
-                  style={{
-                    color:
-                      name in this.state.stagedBirthdays &&
-                      name in this.state.uploadedBirthdays
-                        ? "black" // no change
-                        : name in this.state.stagedBirthdays
-                        ? "green" // added
-                        : "red" // removed
-                  }}
-                >{`${name}: ${convertedBdayString(
-                  this.state.stagedBirthdays[name] ||
-                    this.state.uploadedBirthdays[name]
-                )}`}</div>
-              ))}
           </div>
         </Section>
         <Section title="Preferences" id="preferences">
@@ -228,14 +287,4 @@ function convertedBdayString(str) {
   const month = str.slice(0, 2);
   const day = parseInt(str.slice(2)).toString(10); // remove leading zeros, e.g: '01' --> '1'
   return months[month] + " " + day;
-}
-
-function unpackServerBirthdays(obj) {
-  const keys = Object.keys(obj);
-  const ret = keys.reduce((acc, key) => {
-    acc[obj[key].name] = obj[key].birthday;
-    return acc;
-  }, {});
-  console.log(">>>unpacked", ret);
-  return ret;
 }
