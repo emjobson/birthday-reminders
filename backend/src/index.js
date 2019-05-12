@@ -224,6 +224,7 @@ app.post("/users/:email/friends", (req, res) => {
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
+          console.log('>>>addFriends err', err)
           res.status(500).send();
           throw err;
         }

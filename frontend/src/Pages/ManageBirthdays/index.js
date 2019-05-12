@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import { parseICal } from "../../utils";
 import Section from "../../Components/Section";
 import styles from "./styles.css";
+import auth0Client from "../../Auth";
+import { addFriends, getFriends } from "../../API/friends";
 
 export default class ManageBirthdays extends Component {
   constructor(props) {
@@ -9,8 +11,18 @@ export default class ManageBirthdays extends Component {
     this.state = {
       phoneNumber: "",
       birthdayFile: null,
-      birthdays: {}
+      stagedBirthdays: {},
+      uploadedBirthdays: {}
     };
+  }
+
+  async componentDidMount() {
+    const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
+    if (uploadedBirthdays.data) {
+      this.setState({
+        uploadedBirthdays: unpackServerBirthdays(uploadedBirthdays.data)
+      });
+    }
   }
 
   readFileAsText = async file => {
@@ -28,6 +40,7 @@ export default class ManageBirthdays extends Component {
   };
 
   render() {
+    console.log(">>>uploadedBirthdays", this.state.uploadedBirthdays);
     return (
       <div>
         <Section title="Instructions" id="instructions">
@@ -104,7 +117,10 @@ export default class ManageBirthdays extends Component {
                         evt.target.files[0]
                       );
                       const bdays = parseICal(fileTxt);
-                      this.setState({ birthdays: bdays });
+                      Object.keys(bdays).forEach(name => {
+                        bdays[name] = bdays[name].slice(4, 8);
+                      });
+                      this.setState({ stagedBirthdays: bdays });
                     } catch (e) {
                       console.warn(e.message);
                     }
@@ -128,8 +144,13 @@ export default class ManageBirthdays extends Component {
               disabled={
                 !this.state.birthdayFile || this.state.phoneNumber.length !== 10
               } // TODO: enabled if valid phone number and valid birthday file in form
-              onClick={() => {
+              onClick={async () => {
                 // TODO: send to server if validation was successful
+                const resp = await addFriends(
+                  auth0Client.getProfile().name,
+                  this.state.stagedBirthdays
+                ); // TODO: indicate success
+                console.log(">>>resp", resp);
               }}
             >
               Submit
@@ -151,14 +172,27 @@ export default class ManageBirthdays extends Component {
             birthdays:
           </div>
           <div className={styles.uploadedBirthdays}>
-            {Object.keys(this.state.birthdays)
+            {[
+              ...Object.keys(this.state.stagedBirthdays),
+              ...Object.keys(this.state.uploadedBirthdays)
+            ]
               .sort()
               .map((name, idx) => (
                 <div
                   key={idx}
-                  style={{ "margin-left": ".5em" }}
+                  style={{ marginLeft: ".5em" }}
+                  style={{
+                    color:
+                      name in this.state.stagedBirthdays &&
+                      name in this.state.uploadedBirthdays
+                        ? "black" // no change
+                        : name in this.state.stagedBirthdays
+                        ? "green" // added
+                        : "red" // removed
+                  }}
                 >{`${name}: ${convertedBdayString(
-                  this.state.birthdays[name]
+                  this.state.stagedBirthdays[name] ||
+                    this.state.uploadedBirthdays[name]
                 )}`}</div>
               ))}
           </div>
@@ -191,7 +225,17 @@ const months = {
  * E.g: '20200220' --> 'February 20'
  */
 function convertedBdayString(str) {
-  const month = str.slice(4, 6);
-  const day = parseInt(str.slice(6)).toString(10); // remove leading zeros, e.g: '01' --> '1'
+  const month = str.slice(0, 2);
+  const day = parseInt(str.slice(2)).toString(10); // remove leading zeros, e.g: '01' --> '1'
   return months[month] + " " + day;
+}
+
+function unpackServerBirthdays(obj) {
+  const keys = Object.keys(obj);
+  const ret = keys.reduce((acc, key) => {
+    acc[obj[key].name] = obj[key].birthday;
+    return acc;
+  }, {});
+  console.log(">>>unpacked", ret);
+  return ret;
 }
