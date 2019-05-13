@@ -6,6 +6,7 @@ const morgan = require("morgan");
 const jwt = require("express-jwt");
 const jwksRsa = require("jwks-rsa");
 const db = require("./db");
+const notifications = require("./notifications");
 
 const MODE = db.MODE_TEST;
 
@@ -357,7 +358,60 @@ app.delete("/users/:email/friends", (req, res) => {
           res.status(500).send();
           throw err;
         }
+
         res.status(200).send();
+      });
+    }
+  );
+});
+
+/*
+ * Send notification for date
+ *
+ * Body:
+ *  date: string representing date of user's birthdays to send (if null or undefined, send today's)
+ *
+ * Note: not purely RESTful
+ */
+
+app.put("/users/:email/sendNotification", (req, res) => {
+  const { date } = req.body;
+  const uriParsed = req.path.split("/");
+  const email = uriParsed[uriParsed.length - 2];
+  pool = db.get();
+
+  pool.query(
+    "SELECT userID, preferences FROM Users WHERE email=" + quotesOrNULL(email),
+    (err, result) => {
+      if (err) {
+        res.status(500).send();
+        throw err;
+      }
+      const userID = result[0].userID;
+      const phoneNumber = JSON.parse(result[0].preferences).phoneNumber;
+      const today = new Date();
+      const queryDate =
+        date ||
+        (today.getMonth() + 1).toString().padStart(2, "0") +
+          today
+            .getDate()
+            .toString()
+            .padStart(2, "0");
+      const query =
+        "SELECT name FROM Friends WHERE userID=" +
+        quotesOrNULL(userID) +
+        " AND birthday=" +
+        quotesOrNULL(queryDate) +
+        ";";
+      pool.query(query, (err, result) => {
+        if (err) {
+          res.status(500).send();
+          throw err;
+        }
+        const textMessage = constructReminderText(result);
+        notifications.sendNotifications([
+          { phoneNumber: "+1" + phoneNumber, text: textMessage }
+        ]);
       });
     }
   );
@@ -370,6 +424,16 @@ app.listen(8081, () => {
 
 function quotesOrNULL(str) {
   return str ? "'" + str + "'" : "NULL";
+}
+
+function constructReminderText(result) {
+  if (result.length === 0) {
+    return "None of your friends have birthdays today!";
+  }
+  return (
+    "Don't forget to wish these friends a happy birthday!\n" +
+    result.map(entry => entry.name).join("\n")
+  );
 }
 
 /*

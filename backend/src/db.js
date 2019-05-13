@@ -1,4 +1,6 @@
 const mysql = require("mysql");
+const dotenv = require("dotenv");
+dotenv.config();
 
 // Referenced https://www.terlici.com/2015/08/13/mysql-node-express.html
 
@@ -15,9 +17,9 @@ const state = {
 
 exports.connect = function(mode, done) {
   state.pool = mysql.createPool({
-    host: "localhost",
-    user: "elliott",
-    password: "password",
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     database: mode === exports.MODE_PRODUCTION ? PRODUCTION_DB : TEST_DB
   });
   state.mode = mode;

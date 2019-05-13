@@ -19,7 +19,7 @@ export default class ManageBirthdays extends Component {
       stagedBirthdays: {},
       uploadedBirthdays: {},
       stagedPreferences: { phoneNumber: "" },
-      uploadedPreferences: {}
+      uploadedPreferences: { phoneNumber: "" }
     };
   }
 
@@ -234,8 +234,10 @@ export default class ManageBirthdays extends Component {
             <button
               style={{ borderRadius: ".25rem" }}
               disabled={
-                this.state.stagedPreferences.phoneNumber.length !== 10 ||
-                _.isEmpty(this.state.stagedBirthdays)
+                !areValid(
+                  this.state.stagedPreferences.phoneNumber,
+                  this.state.stagedBirthdays
+                )
               } // TODO: enabled if valid phone number and valid birthday file in form
               onClick={() => {
                 this.handleSubmit();
@@ -255,6 +257,23 @@ export default class ManageBirthdays extends Component {
               Clear
             </button>
           </div>
+          <div>
+            Try it! Click below to send yourself a reminder of today's
+            birthdays.
+          </div>
+          <button
+            disabled={
+              !areValid(
+                this.state.uploadedPreferences.phoneNumber,
+                this.state.uploadedBirthdays
+              )
+            }
+            onClick={() => {
+              console.log("will send today's reminder text!");
+            }}
+          >
+            Send today's birthday reminder
+          </button>
         </Section>
         <Section title="Preferences" id="preferences">
           preference config here
@@ -278,6 +297,12 @@ const months = {
   "11": "November",
   "12": "December"
 };
+
+// stateless functions
+
+function areValid(phone, birthdays) {
+  return phone.length === 10 && !_.isEmpty(birthdays);
+}
 
 /*
  * str 'YYYYMMDD' --> str <month> DD
