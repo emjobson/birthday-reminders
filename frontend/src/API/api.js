@@ -1,6 +1,13 @@
 import axios from "axios";
 import { BASE_SERVER_URL } from "../constants";
 
+export async function sendNotification(user, date) {
+  return await axios.put(
+    BASE_SERVER_URL + "/users/" + user + "/sendNotification",
+    { date: date }
+  );
+}
+
 export async function addFriends(user, friends) {
   return await axios.post(
     BASE_SERVER_URL + "/users/" + user + "/friends",

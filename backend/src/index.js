@@ -415,6 +415,7 @@ app.put("/users/:email/sendNotification", (req, res) => {
       });
     }
   );
+  res.status(200).send(); // TODO: error handling
 });
 
 // start server

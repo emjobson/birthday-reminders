@@ -7,8 +7,9 @@ import {
   addFriends,
   getFriends,
   updatePreferences,
-  getPreferences
-} from "../../API/friends";
+  getPreferences,
+  sendNotification
+} from "../../API/api";
 import * as _ from "lodash";
 
 export default class ManageBirthdays extends Component {
@@ -75,6 +76,7 @@ export default class ManageBirthdays extends Component {
   };
 
   render() {
+    const email = auth0Client.getProfile().name;
     return (
       <div>
         <Section title="Instructions" id="instructions">
@@ -269,7 +271,7 @@ export default class ManageBirthdays extends Component {
               )
             }
             onClick={() => {
-              console.log("will send today's reminder text!");
+              sendNotification(email);
             }}
           >
             Send today's birthday reminder
