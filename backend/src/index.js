@@ -88,10 +88,10 @@ app.post("/users", (req, res) => {
 
 app.get("/users/:email", (req, res) => {
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const email = uriParsed[uriParsed.length - 1];
   const pool = db.get();
   const query =
-    "SELECT friends, preferences FROM Users WHERE " +
+    "SELECT userID, email, preferences FROM Users WHERE " +
     "email=" +
     quotesOrNULL(email) +
     ";";
@@ -102,8 +102,6 @@ app.get("/users/:email", (req, res) => {
       throw err;
     }
     console.log("queried Users table for friends and preferences for " + email);
-    console.log(">>>friends", result[0].friends);
-    console.log(">>>preferences:", result[0].preferences);
     res.send(result[0]); // assuming browser protects from duplicate emails, see below
   });
 });

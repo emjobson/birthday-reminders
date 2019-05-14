@@ -1,6 +1,17 @@
 import axios from "axios";
 import { BASE_SERVER_URL } from "../constants";
 
+export async function getUser(user) {
+  const data = await axios.get(BASE_SERVER_URL + "/users/" + user);
+  return data.data ? data.data : null;
+}
+
+export async function createUser(user) {
+  return await axios.post(BASE_SERVER_URL + "/users", {
+    email: user
+  });
+}
+
 export async function sendNotification(user, date) {
   return await axios.put(
     BASE_SERVER_URL + "/users/" + user + "/sendNotification",

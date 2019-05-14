@@ -4,7 +4,7 @@ import auth0Client from "../../Auth";
 import { Link as ScrollLink } from "react-scroll";
 import styles from "./styles.css";
 
-// stateless (functional) component
+// functional component
 function NavBar(props) {
   const signOut = () => {
     auth0Client.signOut();

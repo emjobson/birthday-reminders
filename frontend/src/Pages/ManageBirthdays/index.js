@@ -9,7 +9,7 @@ import {
   updatePreferences,
   getPreferences,
   sendNotification
-} from "../../API/api";
+} from "../../API";
 import * as _ from "lodash";
 
 export default class ManageBirthdays extends Component {
@@ -29,14 +29,15 @@ export default class ManageBirthdays extends Component {
   }
 
   syncUser = async () => {
-    const uploadedPreferences = await getPreferences(
+    const uploadedPreferences = (await getPreferences(
       auth0Client.getProfile().name
-    );
+    )) || { phoneNumber: "" };
     const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
+
     this.setState({
-      uploadedPreferences: uploadedPreferences,
+      uploadedPreferences: uploadedPreferences || { phoneNumber: "" },
       uploadedBirthdays: uploadedBirthdays,
-      stagedPreferences: { phoneNumber: uploadedPreferences.phoneNumber || "" }
+      stagedPreferences: { phoneNumber: uploadedPreferences.phoneNumber }
     });
   };
 
@@ -100,8 +101,7 @@ export default class ManageBirthdays extends Component {
           </div>
           <div>
             Your saved phone number:{" "}
-            {(this.state.uploadedPreferences &&
-              this.state.uploadedPreferences.phoneNumber) ||
+            {this.state.uploadedPreferences.phoneNumber ||
               "None stored on server."}
           </div>
           <div>
