@@ -7,6 +7,8 @@ const jwt = require("express-jwt");
 const jwksRsa = require("jwks-rsa");
 const db = require("./db");
 const notifications = require("./notifications");
+const utils = require("./utils");
+const scheduler = require("./schedulerFactory");
 
 const MODE = db.MODE_TEST;
 
@@ -20,6 +22,8 @@ app.use(morgan("combined"));
 db.connect(MODE, function() {
   console.log("connected to db");
 });
+
+scheduler.start(); // TEMP for testing cron scheduler --> should send me a text every minute
 
 const checkJwt = jwt({
   secret: jwksRsa.expressJwtSecret({
@@ -63,9 +67,9 @@ app.post("/users", (req, res) => {
   const pool = db.get();
   const query =
     "INSERT INTO Users (email, preferences) VALUES (" +
-    quotesOrNULL(email) +
+    utils.quotesOrNULL(email) +
     ", " +
-    quotesOrNULL(preferences) +
+    utils.quotesOrNULL(preferences) +
     ");";
   console.log(">>>query:", query);
   pool.query(query, (err, result) => {
@@ -93,7 +97,7 @@ app.get("/users/:email", (req, res) => {
   const query =
     "SELECT userID, email, preferences FROM Users WHERE " +
     "email=" +
-    quotesOrNULL(email) +
+    utils.quotesOrNULL(email) +
     ";";
   console.log(">>>query:", query);
   pool.query(query, (err, result) => {
@@ -119,7 +123,7 @@ app.get("/users/:email/preferences", (req, res) => {
   const query =
     "SELECT preferences FROM Users WHERE " +
     "email=" +
-    quotesOrNULL(email) +
+    utils.quotesOrNULL(email) +
     ";";
   console.log(">>>query:", query);
   pool.query(query, (err, result) => {
@@ -150,9 +154,9 @@ app.put("/users/:email/preferences", (req, res) => {
   const pool = db.get();
   const query =
     "UPDATE Users SET preferences=" +
-    quotesOrNULL(preferences) +
+    utils.quotesOrNULL(preferences) +
     " WHERE email=" +
-    quotesOrNULL(email) +
+    utils.quotesOrNULL(email) +
     ";";
   console.log(">>>query:", query);
   pool.query(query, (err, result) => {
@@ -179,7 +183,7 @@ app.delete("/users/:email", (req, res) => {
 
   // look up userID
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email) + ";",
+    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";",
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -188,7 +192,8 @@ app.delete("/users/:email", (req, res) => {
       const userID = result[0].userID;
       console.log(">>>userID:", userID);
       // delete entry in User table
-      let query = "DELETE FROM Users WHERE email=" + quotesOrNULL(email) + ";";
+      let query =
+        "DELETE FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";";
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
         if (err) {
@@ -197,7 +202,9 @@ app.delete("/users/:email", (req, res) => {
         }
         // delete from Friends table
         query =
-          "DELETE FROM Friends WHERE userID=" + quotesOrNULL(userID) + ";";
+          "DELETE FROM Friends WHERE userID=" +
+          utils.quotesOrNULL(userID) +
+          ";";
         console.log(">>>query:", query);
         pool.query(query, (err, result) => {
           if (err) {
@@ -229,7 +236,7 @@ app.post("/users/:email/friends", (req, res) => {
   const pool = db.get();
 
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email) + ";",
+    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";",
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -241,9 +248,9 @@ app.post("/users/:email/friends", (req, res) => {
       for (let i = 0; i < names.length; i++) {
         values +=
           "(" +
-          quotesOrNULL(names[i]) +
+          utils.quotesOrNULL(names[i]) +
           ", " +
-          quotesOrNULL(friends[names[i]]) +
+          utils.quotesOrNULL(friends[names[i]]) +
           ", " +
           userID +
           (i < names.length - 1 ? "), " : ")");
@@ -279,7 +286,7 @@ app.get("/users/:email/friends", (req, res) => {
   const pool = db.get();
 
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email),
+    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email),
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -288,8 +295,8 @@ app.get("/users/:email/friends", (req, res) => {
       const userID = result[0].userID;
       const query =
         "SELECT name, birthday FROM Friends WHERE userID=" +
-        quotesOrNULL(userID) +
-        (date ? " AND birthday=" + quotesOrNULL(date) : "") +
+        utils.quotesOrNULL(userID) +
+        (date ? " AND birthday=" + utils.quotesOrNULL(date) : "") +
         ";";
       console.log(">>>query:", query);
       pool.query(query, (err, result) => {
@@ -334,7 +341,7 @@ app.delete("/users/:email/friends", (req, res) => {
   const pool = db.get();
 
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + quotesOrNULL(email),
+    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email),
     (err, result) => {
       if (err) {
         res.status(500).send();
@@ -346,7 +353,7 @@ app.delete("/users/:email/friends", (req, res) => {
         "(" + namesStringified.slice(1, namesStringified.length - 1) + ")";
       const query = // TODO: is this too slow?
         "DELETE FROM Friends WHERE userID=" +
-        quotesOrNULL(userID) +
+        utils.quotesOrNULL(userID) +
         " AND name IN" +
         namesStr +
         ";";
@@ -373,57 +380,25 @@ app.delete("/users/:email/friends", (req, res) => {
  */
 
 app.put("/users/:email/sendNotification", (req, res) => {
-  const { date } = req.body;
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  pool = db.get();
-
-  pool.query(
-    "SELECT userID, preferences FROM Users WHERE email=" + quotesOrNULL(email),
-    (err, result) => {
-      if (err) {
-        res.status(500).send();
-        throw err;
-      }
-      const userID = result[0].userID;
-      const phoneNumber = JSON.parse(result[0].preferences).phoneNumber;
-      const today = new Date();
-      const queryDate =
-        date ||
-        (today.getMonth() + 1).toString().padStart(2, "0") +
-          today
-            .getDate()
-            .toString()
-            .padStart(2, "0");
-      const query =
-        "SELECT name FROM Friends WHERE userID=" +
-        quotesOrNULL(userID) +
-        " AND birthday=" +
-        quotesOrNULL(queryDate) +
-        ";";
-      pool.query(query, (err, result) => {
-        if (err) {
-          res.status(500).send();
-          throw err;
-        }
-        const textMessage = constructReminderText(result);
-        notifications.sendNotifications([
-          { phoneNumber: "+1" + phoneNumber, text: textMessage }
-        ]);
-      });
-    }
+  const errorCallback = () => {
+    res.status(500).send();
+  };
+  const successCallback = () => {
+    res.status(200).send();
+  };
+  notifications.gatherAndSendNotifications(
+    email,
+    errorCallback,
+    successCallback
   );
-  res.status(200).send(); // TODO: error handling
 });
 
 // start server
 app.listen(8081, () => {
   console.log("listening on port 8081");
 });
-
-function quotesOrNULL(str) {
-  return str ? "'" + str + "'" : "NULL";
-}
 
 function constructReminderText(result) {
   if (result.length === 0) {
