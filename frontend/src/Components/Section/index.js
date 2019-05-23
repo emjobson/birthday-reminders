@@ -9,7 +9,7 @@ export default class Section extends Component {
 
   render() {
     return (
-      <div id={this.props.id}>
+      <div id={this.props.id} style={this.props.style}>
         <h1>{this.props.title}</h1>
         {this.props.children}
         {
@@ -22,5 +22,6 @@ export default class Section extends Component {
 
 Section.propTypes = {
   title: PropTypes.string,
-  id: PropTypes.string
+  id: PropTypes.string,
+  style: PropTypes.object
 };

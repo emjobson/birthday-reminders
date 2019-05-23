@@ -76,11 +76,17 @@ export default class ManageBirthdays extends Component {
     this.syncUser();
   };
 
+  // adding margin on Section caused parent/background div to move down -- see below for how to escape
+  // https://css-tricks.com/forums/topic/why-is-margin-top-causing-the-background-of-a-parent-div-to-move-down/
   render() {
     const email = auth0Client.getProfile().name;
     return (
-      <div>
-        <Section title="Instructions" id="instructions">
+      <div className={styles.background} style={{ color: "white" }}>
+        <Section
+          title="Instructions"
+          id="instructions"
+          style={{ marginTop: "100px" }}
+        >
           <div>instructions go here</div>
           <div>instructions go here</div>
           <div>instructions go here</div>

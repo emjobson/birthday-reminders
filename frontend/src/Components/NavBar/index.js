@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, withRouter } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import auth0Client from "../../Auth";
 import { Link as ScrollLink } from "react-scroll";
 import styles from "./styles.css";
@@ -10,22 +10,26 @@ function NavBar(props) {
     auth0Client.signOut();
     props.history.replace("/");
   };
-
+  // "btn btn-dark"
   return (
-    <nav className="navbar navbar-dark bg-primary fixed-top">
-      <Link className="navbar-brand" to="/">
-        Birthday Reminder App
-      </Link>
+    <nav className={styles.nav}>
+      <span
+        className={styles.navLinkPrimary}
+        onClick={() => {
+          props.history.replace("/");
+        }}
+      >
+        Birthday Reminders
+      </span>
+
       {!auth0Client.isAuthenticated() && (
-        <button className="btn btn-dark" onClick={auth0Client.signIn}>
-          Sign In
-        </button>
+        <span className={styles.buttonBorder} onClick={auth0Client.signIn}>
+          <span className={styles.buttonText}>SIGN IN / REGISTER</span>
+        </span>
       )}
       {auth0Client.isAuthenticated() && props.location.pathname === "/" && (
         <div>
-          <label className="mr-2 text-white">
-            {auth0Client.getProfile().name}
-          </label>
+          {/* email was here */}
           <span
             className={styles.newPageLink}
             onClick={() => {
@@ -34,14 +38,14 @@ function NavBar(props) {
           >
             Manage Birthdays
           </span>
-          <button
-            className="btn btn-dark"
+          <span
+            className={styles.buttonBorder}
             onClick={() => {
               signOut();
             }}
           >
-            Sign Out
-          </button>
+            <span className={styles.buttonText}>SIGN OUT</span>
+          </span>
         </div>
       )}
       {auth0Client.isAuthenticated() && props.location.pathname === "/manage" && (
@@ -79,15 +83,14 @@ function NavBar(props) {
               Preferences
             </ScrollLink>
           </span>
-
-          <button
-            className="btn btn-dark"
+          <span
+            className={styles.buttonBorder}
             onClick={() => {
               signOut();
             }}
           >
-            Sign Out
-          </button>
+            <span className={styles.buttonText}>SIGN OUT</span>
+          </span>
         </div>
       )}
     </nav>
@@ -104,5 +107,22 @@ export default withRouter(NavBar);
             }}
           >
             Manage Birthday Reminders
+          </button>
+*/
+
+/*
+
+      <Link className={styles.navLinkPrimary} to="/">
+        Birthday Reminder App
+      </Link>
+
+
+                <button
+            className="btn btn-dark"
+            onClick={() => {
+              signOut();
+            }}
+          >
+            Sign Out
           </button>
 */

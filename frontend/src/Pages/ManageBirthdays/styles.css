@@ -7,3 +7,11 @@
   margin: 0.5em;
   margin-bottom: 0;
 }
+
+:local(.background) {
+  width: 1440px;
+  height: 1187px;
+  object-fit: contain;
+  background-image: url("../../res/bg.png");
+  float: left;
+}
