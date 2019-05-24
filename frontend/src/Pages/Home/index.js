@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import styles from "./styles.css";
 
 export default class Home extends Component {
   // TODO: figure out how to make div with background image fill up to the size of the user's screen
@@ -8,11 +7,9 @@ export default class Home extends Component {
 
   render() {
     return (
-      <div className={styles.background}>
-        <div style={{ marginTop: "100px", color: "white" }}>
-          Home page placeholder. Description of site, why you should use it, and
-          example video go here.
-        </div>
+      <div style={{ marginTop: "100px", color: "white" }}>
+        Home page placeholder. Description of site, why you should use it, and
+        example video go here.
       </div>
     );
   }

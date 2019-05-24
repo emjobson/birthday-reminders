@@ -10,6 +10,7 @@ import {
   getPreferences,
   sendNotification
 } from "../../API";
+import { GradientButton } from "../../Components/GradientButton";
 import * as _ from "lodash";
 
 export default class ManageBirthdays extends Component {
@@ -81,11 +82,11 @@ export default class ManageBirthdays extends Component {
   render() {
     const email = auth0Client.getProfile().name;
     return (
-      <div className={styles.background} style={{ color: "white" }}>
+      <div style={{ color: "#787e9e" }}>
         <Section
           title="Instructions"
           id="instructions"
-          style={{ marginTop: "100px" }}
+          style={{ marginTop: "70px" }}
         >
           <div>instructions go here</div>
           <div>instructions go here</div>
@@ -106,9 +107,11 @@ export default class ManageBirthdays extends Component {
             the rest.
           </div>
           <div>
-            Your saved phone number:{" "}
-            {this.state.uploadedPreferences.phoneNumber ||
-              "None stored on server."}
+            <span>Your saved phone number: </span>
+            <span style={{ color: "#5f92ce" }}>
+              {this.state.uploadedPreferences.phoneNumber ||
+                "None stored on server."}
+            </span>
           </div>
           <div>
             Click the submit button to save your number and the following
@@ -133,7 +136,7 @@ export default class ManageBirthdays extends Component {
                         name in this.state.stagedBirthdays &&
                         !(name in this.state.uploadedBirthdays)
                           ? "green"
-                          : "black"
+                          : "#5f92ce"
                     }}
                   >{`${name}: ${convertedBdayString(
                     this.state.stagedBirthdays[name] ||
@@ -143,7 +146,7 @@ export default class ManageBirthdays extends Component {
             </span>
             <span
               style={{
-                border: "1px solid black",
+                //     border: "1px solid black",
                 display: "inline-block",
                 width: "200px"
               }}
@@ -152,119 +155,140 @@ export default class ManageBirthdays extends Component {
               <ul style={{ marginBottom: ".25em" }}>
                 <li style={{ color: "green" }}>birthday to add</li>
                 <li style={{ color: "red" }}>birthday to delete</li>
-                <li style={{ color: "black" }}>no change</li>
+                <li style={{ color: "#5f92ce" }}>no change</li>
               </ul>
             </span>
           </div>
-
-          <div style={{ marginLeft: ".5em" }}>
+          <div style={{ display: "inline-block" }}>
+            <span style={{ marginLeft: ".5em" }}>
+              <span
+                style={{
+                  color:
+                    this.state.stagedPreferences.phoneNumber.length === 10
+                      ? "green"
+                      : "red"
+                }}
+              >
+                *
+              </span>
+              <input
+                style={{
+                  width: "400px",
+                  margin: ".5em",
+                  display: "inline-block",
+                  color: "#5f92ce",
+                  backgroundColor: "transparent"
+                }}
+                type="tel"
+                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                required
+                onChange={evt => {
+                  const ch = evt.target.value.charAt(
+                    evt.target.value.length - 1
+                  );
+                  if (
+                    evt.target.value.length >
+                      this.state.stagedPreferences.phoneNumber.length &&
+                    (ch < "0" || ch > "9")
+                  ) {
+                    return;
+                  }
+                  this.setState({
+                    stagedPreferences: { phoneNumber: evt.target.value }
+                  });
+                }}
+                value={this.state.stagedPreferences.phoneNumber}
+                className="form-control"
+                placeholder="Phone #"
+                aria-label="phone_number"
+              />
+            </span>
             <span
               style={{
-                color:
-                  this.state.stagedPreferences.phoneNumber.length === 10
-                    ? "green"
-                    : "red"
+                marginLeft: ".5em",
+                position: "relative",
+                display: "flex",
+                alignItems: "stretch"
               }}
             >
-              *
-            </span>
-            <input
-              style={{
-                width: "400px",
-                margin: ".5em",
-                display: "inline-block"
-              }}
-              type="tel"
-              pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-              required
-              onChange={evt => {
-                const ch = evt.target.value.charAt(evt.target.value.length - 1);
-                if (
-                  evt.target.value.length >
-                    this.state.stagedPreferences.phoneNumber.length &&
-                  (ch < "0" || ch > "9")
-                ) {
-                  return;
-                }
-                this.setState({
-                  stagedPreferences: { phoneNumber: evt.target.value }
-                });
-              }}
-              value={this.state.stagedPreferences.phoneNumber}
-              className="form-control"
-              placeholder="Phone #"
-              aria-label="phone_number"
-            />
-          </div>
-          <div className="input-group" style={{ marginLeft: ".5em" }}>
-            <span style={{ color: this.state.birthdayFile ? "green" : "red" }}>
-              *
+              <span
+                style={{ color: this.state.birthdayFile ? "green" : "red" }}
+              >
+                *
+              </span>
+              <div
+                style={{ width: "400px", display: "flex", marginLeft: ".5em" }}
+              >
+                <div className="custom-file">
+                  <input
+                    style={{ cursor: "pointer" }}
+                    type="file"
+                    className="custom-file-input"
+                    id="inputGroupFile02"
+                    accept=".ics"
+                    onChange={async evt => {
+                      this.setState({ birthdayFile: evt.target.files[0] });
+                      try {
+                        const fileTxt = await this.readFileAsText(
+                          evt.target.files[0]
+                        );
+                        const bdays = parseICal(fileTxt);
+                        Object.keys(bdays).forEach(name => {
+                          bdays[name] = bdays[name].slice(4, 8);
+                        });
+                        this.setState({ stagedBirthdays: bdays });
+                      } catch (e) {
+                        console.warn(e.message);
+                      }
+                    }}
+                  />
+                  <label
+                    className="custom-file-label"
+                    htmlFor="inputGroupFile02"
+                    style={{
+                      borderRadius: ".25rem",
+                      color: "grey",
+                      backgroundColor: "transparent"
+                    }}
+                    //     aria-describedby="inputGroupFileAddon02"
+                  >
+                    {(this.state.birthdayFile &&
+                      this.state.birthdayFile.name) ||
+                      "Choose File"}
+                  </label>
+                </div>
+              </div>
             </span>
             <div
-              style={{ width: "400px", display: "flex", marginLeft: ".5em" }}
+              style={{
+                margin: ".5em",
+                display: "flex",
+                justifyContent: "flex-start"
+              }}
             >
-              <div className="custom-file">
-                <input
-                  style={{ cursor: "pointer" }}
-                  type="file"
-                  className="custom-file-input"
-                  id="inputGroupFile02"
-                  accept=".ics"
-                  onChange={async evt => {
-                    this.setState({ birthdayFile: evt.target.files[0] });
-                    try {
-                      const fileTxt = await this.readFileAsText(
-                        evt.target.files[0]
-                      );
-                      const bdays = parseICal(fileTxt);
-                      Object.keys(bdays).forEach(name => {
-                        bdays[name] = bdays[name].slice(4, 8);
-                      });
-                      this.setState({ stagedBirthdays: bdays });
-                    } catch (e) {
-                      console.warn(e.message);
-                    }
-                  }}
-                />
-                <label
-                  className="custom-file-label"
-                  htmlFor="inputGroupFile02"
-                  style={{ borderRadius: ".25rem", color: "grey" }}
-                  //     aria-describedby="inputGroupFileAddon02"
-                >
-                  {(this.state.birthdayFile && this.state.birthdayFile.name) ||
-                    "Choose File"}
-                </label>
-              </div>
+              <GradientButton
+                style={{ marginLeft: "1.0em" }}
+                text="SUBMIT"
+                disabled={
+                  !areValid(
+                    this.state.stagedPreferences.phoneNumber,
+                    this.state.stagedBirthdays
+                  )
+                } // TODO: enabled if valid phone number and valid birthday file in form
+                onClick={() => this.handleSubmit()}
+              />
+              <GradientButton
+                text="CLEAR"
+                onClick={() => {
+                  this.setState({
+                    stagedPreferences: { phoneNumber: "" },
+                    birthdayFile: null
+                  });
+                }}
+              />
             </div>
           </div>
-          <div style={{ width: "400px", margin: ".5em", marginLeft: "1.5em" }}>
-            <button
-              style={{ borderRadius: ".25rem" }}
-              disabled={
-                !areValid(
-                  this.state.stagedPreferences.phoneNumber,
-                  this.state.stagedBirthdays
-                )
-              } // TODO: enabled if valid phone number and valid birthday file in form
-              onClick={() => {
-                this.handleSubmit();
-              }}
-            >
-              Submit
-            </button>
-            <button
-              style={{ borderRadius: ".25rem" }}
-              onClick={() => {
-                this.setState({
-                  stagedPreferences: { phoneNumber: "" },
-                  birthdayFile: null
-                });
-              }}
-            >
-              Clear
-            </button>
-          </div>
+
           <div>
             Try it! Click below to send yourself a reminder of today's
             birthdays.

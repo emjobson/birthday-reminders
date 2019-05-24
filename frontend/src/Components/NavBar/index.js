@@ -3,6 +3,7 @@ import { withRouter } from "react-router-dom";
 import auth0Client from "../../Auth";
 import { Link as ScrollLink } from "react-scroll";
 import styles from "./styles.css";
+import { GradientButton } from "../GradientButton";
 
 // functional component
 function NavBar(props) {
@@ -23,37 +24,30 @@ function NavBar(props) {
       </span>
 
       {!auth0Client.isAuthenticated() && (
-        <span className={styles.buttonBorder} onClick={auth0Client.signIn}>
-          <span className={styles.buttonText}>SIGN IN / REGISTER</span>
-        </span>
+        <GradientButton
+          text="SIGN IN / REGISTER"
+          onClick={auth0Client.signIn}
+        />
       )}
       {auth0Client.isAuthenticated() && props.location.pathname === "/" && (
         <div>
-          {/* email was here */}
           <span
-            className={styles.newPageLink}
+            className={styles.navLinkSecondary}
             onClick={() => {
               props.history.replace("/manage");
             }}
           >
             Manage Birthdays
           </span>
-          <span
-            className={styles.buttonBorder}
-            onClick={() => {
-              signOut();
-            }}
-          >
-            <span className={styles.buttonText}>SIGN OUT</span>
-          </span>
+          <GradientButton text="SIGN OUT" onClick={() => signOut()} />
         </div>
       )}
       {auth0Client.isAuthenticated() && props.location.pathname === "/manage" && (
         <div>
-          <label className="mr-2 text-white">
+          <label className="mr-2" style={{ color: "#5f92ce" }}>
             {auth0Client.getProfile().name}
           </label>
-          <span className={styles.scrollLink}>
+          <span className={styles.navLinkSecondary}>
             <ScrollLink
               to="instructions"
               smooth={true}
@@ -63,7 +57,7 @@ function NavBar(props) {
               Instructions
             </ScrollLink>
           </span>
-          <span className={styles.scrollLink}>
+          <span className={styles.navLinkSecondary}>
             <ScrollLink
               to="getting-started"
               smooth={true}
@@ -73,7 +67,7 @@ function NavBar(props) {
               Get Started
             </ScrollLink>
           </span>
-          <span className={styles.scrollLink}>
+          <span className={styles.navLinkSecondary}>
             <ScrollLink
               to="preferences"
               smooth={true}
@@ -83,14 +77,7 @@ function NavBar(props) {
               Preferences
             </ScrollLink>
           </span>
-          <span
-            className={styles.buttonBorder}
-            onClick={() => {
-              signOut();
-            }}
-          >
-            <span className={styles.buttonText}>SIGN OUT</span>
-          </span>
+          <GradientButton text="SIGN OUT" onClick={() => signOut()} />
         </div>
       )}
     </nav>

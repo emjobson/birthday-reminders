@@ -31,7 +31,7 @@ class App extends Component {
 
   render() {
     return (
-      <div>
+      <div style={{ height: "100%" }}>
         <NavBar />
         <Route exact path="/" component={Home} />
         <Route exact path="/callback" component={Callback} />
