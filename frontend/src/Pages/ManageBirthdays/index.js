@@ -34,7 +34,7 @@ export default class ManageBirthdays extends Component {
       auth0Client.getProfile().name
     )) || { phoneNumber: "" };
     const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
-
+    console.log(">>>result of getFriends in ManageBirthdays page");
     this.setState({
       uploadedPreferences: uploadedPreferences || { phoneNumber: "" },
       uploadedBirthdays: uploadedBirthdays,

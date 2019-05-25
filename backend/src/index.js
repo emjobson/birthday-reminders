@@ -5,10 +5,11 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const jwt = require("express-jwt");
 const jwksRsa = require("jwks-rsa");
-const db = require("./db");
+const db = require("./data/db");
 const notifications = require("./notifications");
 const utils = require("./utils");
 const scheduler = require("./schedulerFactory");
+const dataAccess = require("./data/data_access");
 
 const MODE = db.MODE_TEST;
 
@@ -61,25 +62,15 @@ app.post("/", checkJwt, (req, res) => {
  *  preferences: stringified preferences object
  */
 
-app.post("/users", (req, res) => {
+app.post("/users", async (req, res) => {
   // TODO: checkJwt makes endpoint only available to authenticated users --> do I want it here?
   const { email, preferences } = req.body;
-  const pool = db.get();
-  const query =
-    "INSERT INTO Users (email, preferences) VALUES (" +
-    utils.quotesOrNULL(email) +
-    ", " +
-    utils.quotesOrNULL(preferences) +
-    ");";
-  console.log(">>>query:", query);
-  pool.query(query, (err, result) => {
-    if (err) {
-      res.status(500).send(); // 500: internal server error
-      throw err; // TODO: do I want to throw an error?
-    }
-    console.log("added user " + email + " to Users table");
+  try {
+    await dataAccess.createUser(email, preferences);
     res.status(200).send();
-  });
+  } catch (err) {
+    res.status(500).send();
+  }
 });
 
 /*
@@ -87,27 +78,18 @@ app.post("/users", (req, res) => {
  *
  * Looks up and returns friends and preferences for the given user.
  *
- * TODO: test this with Postman
  */
 
-app.get("/users/:email", (req, res) => {
+app.get("/users/:email", async (req, res) => {
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 1];
-  const pool = db.get();
-  const query =
-    "SELECT userID, email, preferences FROM Users WHERE " +
-    "email=" +
-    utils.quotesOrNULL(email) +
-    ";";
-  console.log(">>>query:", query);
-  pool.query(query, (err, result) => {
-    if (err) {
-      res.status(500).send(); // 500: internal server error
-      throw err;
-    }
+  try {
+    const result = await dataAccess.getUser(email);
     console.log("queried Users table for friends and preferences for " + email);
-    res.send(result[0]); // assuming browser protects from duplicate emails, see below
-  });
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(); // internal server error
+  }
 });
 
 /*
@@ -116,25 +98,15 @@ app.get("/users/:email", (req, res) => {
  * Looks up and returns preferences for the given user.
  */
 
-app.get("/users/:email/preferences", (req, res) => {
+app.get("/users/:email/preferences", async (req, res) => {
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-  const query =
-    "SELECT preferences FROM Users WHERE " +
-    "email=" +
-    utils.quotesOrNULL(email) +
-    ";";
-  console.log(">>>query:", query);
-  pool.query(query, (err, result) => {
-    if (err) {
-      res.status(500).send(); // 500: internal server error
-      throw err;
-    }
-    console.log("queried Users for preferences for " + email);
-    console.log(">>>preferences:", result[0].preferences);
-    res.send(result[0].preferences); // assuming browser protects from duplicate emails, see below
-  });
+  try {
+    const result = await dataAccess.getPreferences(email);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send();
+  }
 });
 
 /*
@@ -147,26 +119,16 @@ app.get("/users/:email/preferences", (req, res) => {
  *  preferences: JSON stringified preferences object
  */
 
-app.put("/users/:email/preferences", (req, res) => {
+app.put("/users/:email/preferences", async (req, res) => {
   const { preferences } = req.body;
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-  const query =
-    "UPDATE Users SET preferences=" +
-    utils.quotesOrNULL(preferences) +
-    " WHERE email=" +
-    utils.quotesOrNULL(email) +
-    ";";
-  console.log(">>>query:", query);
-  pool.query(query, (err, result) => {
-    if (err) {
-      res.status(500).send(); // 500: internal server error
-      throw err;
-    }
-    console.log("updated Users table with preferences for " + email);
-    res.status(200).send(); // TODO: send different response upon failure?
-  });
+  try {
+    await dataAccess.updatePreferences(email, preferences);
+    res.status(200).send();
+  } catch (err) {
+    res.status(500).send();
+  }
 });
 
 /*
@@ -279,36 +241,16 @@ app.post("/users/:email/friends", (req, res) => {
  *  date: string date, can be null or undefined if no date desired
  */
 
-app.get("/users/:email/friends", (req, res) => {
+app.get("/users/:email/friends", async (req, res) => {
   const { date } = req.body; // if unspecified, return all friends
   const uriParsed = req.path.split("/");
   const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-
-  pool.query(
-    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email),
-    (err, result) => {
-      if (err) {
-        res.status(500).send();
-        throw err;
-      }
-      const userID = result[0].userID;
-      const query =
-        "SELECT name, birthday FROM Friends WHERE userID=" +
-        utils.quotesOrNULL(userID) +
-        (date ? " AND birthday=" + utils.quotesOrNULL(date) : "") +
-        ";";
-      console.log(">>>query:", query);
-      pool.query(query, (err, result) => {
-        if (err) {
-          res.status(500).send();
-          throw err;
-        }
-        console.log(">>>result:", result);
-        res.send(result); // TODO: come back to this and reformat after testing with 1 or more friends
-      });
-    }
-  );
+  try {
+    const result = await dataAccess.getFriends(email, date);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send();
+  }
 });
 
 /*

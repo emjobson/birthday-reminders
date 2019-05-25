@@ -1,6 +1,6 @@
 const Twilio = require("twilio");
 const dotenv = require("dotenv");
-const db = require("./db");
+const db = require("./data/db");
 const utils = require("./utils");
 dotenv.config();
 
