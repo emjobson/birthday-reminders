@@ -77,7 +77,7 @@ app.post("/users", async (req, res) => {
  * Get User
  *
  * Looks up and returns friends and preferences for the given user.
- *
+ * Note: Express sets content-type as 'application/json', since result is an object.
  */
 
 app.get("/users/:email", async (req, res) => {
@@ -96,13 +96,14 @@ app.get("/users/:email", async (req, res) => {
  * Get Preferences
  *
  * Looks up and returns preferences for the given user.
+ * Note: Express sets content-type as 'text/html', since result is a string.
  */
 
-app.get("/users/:email/preferences", async (req, res) => {
+app.get("/users/:userID/preferences", async (req, res) => {
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const userID = uriParsed[uriParsed.length - 2];
   try {
-    const result = await dataAccess.getPreferences(email);
+    const result = await dataAccess.getPreferences(userID);
     res.send(result);
   } catch (err) {
     res.status(500).send();
@@ -119,12 +120,12 @@ app.get("/users/:email/preferences", async (req, res) => {
  *  preferences: JSON stringified preferences object
  */
 
-app.put("/users/:email/preferences", async (req, res) => {
+app.put("/users/:userID/preferences", async (req, res) => {
   const { preferences } = req.body;
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const userID = uriParsed[uriParsed.length - 2];
   try {
-    await dataAccess.updatePreferences(email, preferences);
+    await dataAccess.updatePreferences(userID, preferences);
     res.status(200).send();
   } catch (err) {
     res.status(500).send();
@@ -241,12 +242,12 @@ app.post("/users/:email/friends", (req, res) => {
  *  date: string date, can be null or undefined if no date desired
  */
 
-app.get("/users/:email/friends", async (req, res) => {
+app.get("/users/:userID/friends", async (req, res) => {
   const { date } = req.body; // if unspecified, return all friends
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const userID = uriParsed[uriParsed.length - 2];
   try {
-    const result = await dataAccess.getFriends(email, date);
+    const result = await dataAccess.getFriends(userID, date);
     res.send(result);
   } catch (err) {
     res.status(500).send();
@@ -305,7 +306,6 @@ app.delete("/users/:email/friends", (req, res) => {
           res.status(500).send();
           throw err;
         }
-
         res.status(200).send();
       });
     }
@@ -315,15 +315,12 @@ app.delete("/users/:email/friends", (req, res) => {
 /*
  * Send notification for date
  *
- * Body:
- *  date: string representing date of user's birthdays to send (if null or undefined, send today's)
- *
  * Note: not purely RESTful
  */
 
-app.put("/users/:email/sendNotification", (req, res) => {
+app.put("/users/:userID/sendNotification", (req, res) => {
   const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
+  const userID = uriParsed[uriParsed.length - 2];
   const errorCallback = () => {
     res.status(500).send();
   };
@@ -331,7 +328,7 @@ app.put("/users/:email/sendNotification", (req, res) => {
     res.status(200).send();
   };
   notifications.gatherAndSendNotifications(
-    email,
+    userID,
     errorCallback,
     successCallback
   );
@@ -341,16 +338,6 @@ app.put("/users/:email/sendNotification", (req, res) => {
 app.listen(8081, () => {
   console.log("listening on port 8081");
 });
-
-function constructReminderText(result) {
-  if (result.length === 0) {
-    return "None of your friends have birthdays today!";
-  }
-  return (
-    "Don't forget to wish these friends a happy birthday!\n" +
-    result.map(entry => entry.name).join("\n")
-  );
-}
 
 /*
  * ASSUMPTIONS:

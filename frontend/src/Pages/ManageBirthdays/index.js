@@ -3,12 +3,13 @@ import { parseICal } from "../../utils";
 import Section from "../../Components/Section";
 import styles from "./styles.css";
 import auth0Client from "../../Auth";
+import { BirthdayEditor } from "../../Components/BirthdayEditor";
 import {
   addFriends,
   getFriends,
   updatePreferences,
-  getPreferences,
-  sendNotification
+  sendNotification,
+  getUser
 } from "../../API";
 import { GradientButton } from "../../Components/GradientButton";
 import * as _ from "lodash";
@@ -18,10 +19,12 @@ export default class ManageBirthdays extends Component {
     super(props);
     this.state = {
       birthdayFile: null,
-      stagedBirthdays: {},
-      uploadedBirthdays: {},
+      stagedBirthdays: {}, // this will go away soon
+      referenceBirthdays: {},
+      editedBirthdays: { deleted: new Set() },
       stagedPreferences: { phoneNumber: "" },
-      uploadedPreferences: { phoneNumber: "" }
+      uploadedPreferences: { phoneNumber: "" },
+      userID: null
     };
   }
 
@@ -30,15 +33,17 @@ export default class ManageBirthdays extends Component {
   }
 
   syncUser = async () => {
-    const uploadedPreferences = (await getPreferences(
-      auth0Client.getProfile().name
-    )) || { phoneNumber: "" };
-    const uploadedBirthdays = await getFriends(auth0Client.getProfile().name);
-    console.log(">>>result of getFriends in ManageBirthdays page");
+    const userData = await getUser(auth0Client.getProfile().name);
+    const { userID, preferences } = userData;
+    const { referenceBirthdays, maxReferenceFriendID } = await getFriends(
+      userID
+    );
     this.setState({
-      uploadedPreferences: uploadedPreferences || { phoneNumber: "" },
-      uploadedBirthdays: uploadedBirthdays,
-      stagedPreferences: { phoneNumber: uploadedPreferences.phoneNumber }
+      uploadedPreferences: preferences || { phoneNumber: "" },
+      referenceBirthdays: referenceBirthdays,
+      stagedPreferences: preferences || { phoneNumber: "" },
+      userID: userID,
+      maxReferenceFriendID
     });
   };
 
@@ -58,13 +63,15 @@ export default class ManageBirthdays extends Component {
 
   handleSubmit = async () => {
     // TODO: handle upload errors
+    /*
+    const { userID } = this.state;
     const email = auth0Client.getProfile().name;
-    await updatePreferences(email, this.state.stagedPreferences);
+    await updatePreferences(userID, this.state.stagedPreferences);
 
     const newFriends = _.reduce(
       this.state.stagedBirthdays,
       (result, bday, name) => {
-        if (!(name in this.state.uploadedBirthdays)) {
+        if (!(name in this.state.referenceBirthdays)) {
           result[name] = bday;
         }
         return result;
@@ -75,12 +82,20 @@ export default class ManageBirthdays extends Component {
       await addFriends(email, newFriends);
     }
     this.syncUser();
+    */
   };
 
   // adding margin on Section caused parent/background div to move down -- see below for how to escape
   // https://css-tricks.com/forums/topic/why-is-margin-top-causing-the-background-of-a-parent-div-to-move-down/
   render() {
-    const email = auth0Client.getProfile().name;
+    const {
+      userID,
+      referenceBirthdays,
+      editedBirthdays,
+      maxReferenceFriendID
+    } = this.state;
+
+    console.log(">>>editedBirthdays", editedBirthdays);
     return (
       <div style={{ color: "#787e9e" }}>
         <Section
@@ -117,48 +132,14 @@ export default class ManageBirthdays extends Component {
             Click the submit button to save your number and the following
             birthdays:
           </div>
-          <div>
-            <span className={styles.uploadedBirthdays}>
-              {Array.from(
-                new Set([
-                  ...Object.keys(this.state.stagedBirthdays),
-                  ...Object.keys(this.state.uploadedBirthdays)
-                ])
-              )
-                .sort()
-                .map((name, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "block",
-                      marginLeft: ".5em",
-                      color:
-                        name in this.state.stagedBirthdays &&
-                        !(name in this.state.uploadedBirthdays)
-                          ? "green"
-                          : "#5f92ce"
-                    }}
-                  >{`${name}: ${convertedBdayString(
-                    this.state.stagedBirthdays[name] ||
-                      this.state.uploadedBirthdays[name]
-                  )}`}</div>
-                ))}
-            </span>
-            <span
-              style={{
-                //     border: "1px solid black",
-                display: "inline-block",
-                width: "200px"
-              }}
-            >
-              <div style={{ marginLeft: ".25em" }}>Key:</div>
-              <ul style={{ marginBottom: ".25em" }}>
-                <li style={{ color: "green" }}>birthday to add</li>
-                <li style={{ color: "red" }}>birthday to delete</li>
-                <li style={{ color: "#5f92ce" }}>no change</li>
-              </ul>
-            </span>
-          </div>
+          <BirthdayEditor
+            referenceBirthdays={referenceBirthdays}
+            editedBirthdays={editedBirthdays}
+            onEdit={editedBirthdays => {
+              this.setState({ editedBirthdays });
+            }}
+            maxReferenceFriendID={maxReferenceFriendID}
+          />
           <div style={{ display: "inline-block" }}>
             <span style={{ marginLeft: ".5em" }}>
               <span
@@ -233,10 +214,39 @@ export default class ManageBirthdays extends Component {
                           evt.target.files[0]
                         );
                         const bdays = parseICal(fileTxt);
+                        //  this.setState({ stagedBirthdays: bdays });
+                        const usedNames = new Set(
+                          Object.keys(referenceBirthdays).map(
+                            friendID => referenceBirthdays[friendID].name
+                          )
+                        );
+                        const newBirthdays = {};
+                        let friendID = maxReferenceFriendID + 1;
                         Object.keys(bdays).forEach(name => {
-                          bdays[name] = bdays[name].slice(4, 8);
+                          //    bdays[name] = bdays[name].slice(4, 8);
+                          if (!(name in usedNames)) {
+                            newBirthdays[friendID.toString()] = {
+                              name,
+                              birthday: bdays[name].slice(4, 8)
+                            };
+                            friendID++;
+                          }
                         });
-                        this.setState({ stagedBirthdays: bdays });
+                        /*
+                        const filteredBirthdays = _.pick(
+                          // new names only (if you want duplicate name, can add it manually in editor)
+                          bdays,
+                          Object.keys(bdays).filter(
+                            name => !(name in usedNames)
+                          )
+                        );
+                        */
+                        this.setState({
+                          editedBirthdays: {
+                            ...editedBirthdays,
+                            ...newBirthdays
+                          }
+                        });
                       } catch (e) {
                         console.warn(e.message);
                       }
@@ -250,7 +260,6 @@ export default class ManageBirthdays extends Component {
                       color: "grey",
                       backgroundColor: "transparent"
                     }}
-                    //     aria-describedby="inputGroupFileAddon02"
                   >
                     {(this.state.birthdayFile &&
                       this.state.birthdayFile.name) ||
@@ -269,12 +278,14 @@ export default class ManageBirthdays extends Component {
               <GradientButton
                 style={{ marginLeft: "1.0em" }}
                 text="SUBMIT"
+                /*
                 disabled={
                   !areValid(
                     this.state.stagedPreferences.phoneNumber,
                     this.state.stagedBirthdays
                   )
                 } // TODO: enabled if valid phone number and valid birthday file in form
+                */
                 onClick={() => this.handleSubmit()}
               />
               <GradientButton
@@ -294,14 +305,16 @@ export default class ManageBirthdays extends Component {
             birthdays.
           </div>
           <button
+            /*
             disabled={
               !areValid(
                 this.state.uploadedPreferences.phoneNumber,
-                this.state.uploadedBirthdays
+                this.state.referenceBirthdays
               )
             }
+            */
             onClick={() => {
-              sendNotification(email);
+              sendNotification(userID);
             }}
           >
             Send today's birthday reminder
@@ -315,33 +328,9 @@ export default class ManageBirthdays extends Component {
   }
 }
 
-const months = {
-  "01": "January",
-  "02": "February",
-  "03": "March",
-  "04": "April",
-  "05": "May",
-  "06": "June",
-  "07": "July",
-  "08": "August",
-  "09": "September",
-  "10": "October",
-  "11": "November",
-  "12": "December"
-};
-
 // stateless functions
 
+// TODO: this is currently broken, given new changes
 function areValid(phone, birthdays) {
   return phone.length === 10 && !_.isEmpty(birthdays);
-}
-
-/*
- * str 'YYYYMMDD' --> str <month> DD
- * E.g: '20200220' --> 'February 20'
- */
-function convertedBdayString(str) {
-  const month = str.slice(0, 2);
-  const day = parseInt(str.slice(2)).toString(10); // remove leading zeros, e.g: '01' --> '1'
-  return months[month] + " " + day;
 }

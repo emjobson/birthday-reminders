@@ -14,14 +14,14 @@ dotenv.config();
  */
 
 exports.gatherAndSendNotifications = function(
-  user,
+  userID,
   errorCallback,
   successCallback
 ) {
   const pool = db.get();
   const usersQuery =
-    "SELECT userID, preferences from Users" +
-    (user ? " WHERE email='" + user + "'" : "") +
+    "SELECT userID, preferences from Users" + // odd to select userID when we might already know it? makes following code simpler
+    (userID ? " WHERE userID='" + userID + "'" : "") +
     ";";
   pool.query(usersQuery, (err, result) => {
     if (err) {

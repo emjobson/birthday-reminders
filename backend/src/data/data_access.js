@@ -48,62 +48,49 @@ exports.createUser = async (email, preferences) => {
 
 // TO ADD: SETFRIENDS
 
-exports.getFriends = async (email, date) => {
+exports.getFriends = async (userID, date) => {
   const pool = db.get();
-
   return new Promise((resolve, reject) => {
-    pool.query(
-      "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email),
-      (err, result) => {
-        if (err) {
-          throw err;
-        }
-        const userID = result[0].userID;
-        const query =
-          "SELECT name, birthday FROM Friends WHERE userID=" +
-          utils.quotesOrNULL(userID) +
-          (date ? " AND birthday=" + utils.quotesOrNULL(date) : "") +
-          ";";
-        console.log(">>>query:", query);
-        pool.query(query, (err, result) => {
-          if (err) {
-            throw err;
-          }
-          console.log(">>>result:", result);
-          resolve(result);
-        });
+    const query =
+      "SELECT name, birthday, friendID FROM Friends WHERE userID=" +
+      utils.quotesOrNULL(userID) +
+      (date ? " AND birthday=" + utils.quotesOrNULL(date) : "") +
+      ";";
+    console.log(">>>query:", query);
+    pool.query(query, (err, result) => {
+      if (err) {
+        throw err;
       }
-    );
+      console.log(">>>result:", result);
+      resolve(result);
+    });
   });
 };
 
-exports.updatePreferences = async (email, preferences) => {
+exports.updatePreferences = async (userID, preferences) => {
   const pool = db.get();
   const query =
     "UPDATE Users SET preferences=" +
     utils.quotesOrNULL(preferences) +
-    " WHERE email=" +
-    utils.quotesOrNULL(email) +
+    " WHERE userID=" +
+    utils.quotesOrNULL(userID) +
     ";";
-  console.log(">>>query:", query);
-
   return new Promise((resolve, reject) => {
     pool.query(query, (err, result) => {
       if (err) {
         throw err;
       }
-      console.log("updated Users table with preferences for " + email);
       resolve();
     });
   });
 };
 
-exports.getPreferences = async email => {
+exports.getPreferences = async userID => {
   const pool = db.get();
   const query =
     "SELECT preferences FROM Users WHERE " +
-    "email=" +
-    utils.quotesOrNULL(email) +
+    "userID=" +
+    utils.quotesOrNULL(userID) +
     ";";
   console.log(">>>query:", query);
   return new Promise((resolve, reject) => {
@@ -111,7 +98,7 @@ exports.getPreferences = async email => {
       if (err) {
         throw err;
       }
-      console.log("queried Users for preferences for " + email);
+      console.log("queried Users for preferences for " + userID);
       console.log(">>>preferences:", result[0].preferences);
       resolve(result[0].preferences);
     });

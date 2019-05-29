@@ -1,0 +1,10 @@
+:local(.uploadedBirthdays) {
+  display: inline-block;
+  height: 350px;
+  width: 350px;
+  overflow: auto;
+  border: 1px solid #787e9e;
+  margin: 0.5em;
+  margin-bottom: 0;
+  border-radius: 0.5rem;
+}
