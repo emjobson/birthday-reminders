@@ -1,38 +1,27 @@
-import React, { Component } from "react";
-import PropTypes from "prop-types";
-import styles from "./styles.css";
-import { BirthdayEditorItem } from "../BirthdayEditor/BirthdayEditorItem";
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+import styles from './styles.css';
+import { BirthdayEditorItem } from '../BirthdayEditor/BirthdayEditorItem';
 
+//@ts-check
 export class BirthdayEditor extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      editMode: true,
-      editFocusFriendID: null,
-      sortAlphabetically: true
+      editMode: false,
+      sortAlphabetically: true,
+      filterString: '',
+      currentEdit: null
     };
   }
 
-  /*
-   * TODOs:
-   *    1. don't sort until AFTER you finish editing an item
-   *      option a.
-   *         sort by initial order (will maintain list of keys, ordered by INITIAL display name)
-   *          (for reference: friendId and name ... for new: old name as id, new name as display)
-   *      option b.
-   *        add an "originalName" property to everything and sort by that --> for most items, that's
-   *        just its name --> for the single item that we're editing, that's the original name
-   *          --> this is the cleanest solution I've thought of
-   *              when we editFocus on something, we need to set an object that contains its index and originalName
-   *                 (saving index is only a necessity since I never made the new entries uniquely identifiable --> will keep this in mind for future projects)
-   *          --> any time the editFocus item loses focus (choose different edit item, delete, or click outside on page (to implement later)),
-   *              need to reset this to null
-   *          --> THIS WON'T WORK UNLESS NEW NAMES ARE UNIQUELY IDENTIFIABLE (someone COULD choose
-   *            to upload a friend whose name collides with a friendID) --> will need to restructure editedBirthdays, give new items friendIDs that don't collide with existing friendIDs
-   */
-
   render() {
-    const { editMode, editFocusFriendID, sortAlphabetically } = this.state;
+    const {
+      editMode,
+      sortAlphabetically,
+      filterString,
+      currentEdit
+    } = this.state;
     const {
       referenceBirthdays = {},
       editedBirthdays,
@@ -53,125 +42,325 @@ export class BirthdayEditor extends Component {
     });
 
     Object.keys(editedBirthdays).forEach(friendID => {
-      if (friendID !== "deleted" && !(friendID in referenceBirthdays)) {
+      if (friendID !== 'deleted' && !(friendID in referenceBirthdays)) {
         displayBirthdays.push({ ...editedBirthdays[friendID], key: friendID });
       }
     });
 
-    /*
-    displayBirthdays = displayBirthdays.concat(
-      // previous mistake here: assumed concat mutated array, rather than return new
-      Object.keys(editedBirthdays.new || {}).map(name => ({
-        key: "new",
-        name,
-        birthday: editedBirthdays.new[name]
-      }))
-    );
-    */
+    if (filterString) {
+      displayBirthdays = displayBirthdays.filter(obj =>
+        obj.name.toLowerCase().includes(filterString.toLowerCase())
+      );
+    }
 
-    //  const displayFriendIds = new Set(displayBirthdays.map(obj => obj.key));
     const sortFn = sortAlphabetically
       ? (a, b) => (b.name.toLowerCase() < a.name.toLowerCase() ? 1 : -1)
       : (a, b) => (b.birthday < a.birthday ? 1 : -1);
 
     displayBirthdays.sort(sortFn);
-
     return (
-      <div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
         <span className={styles.uploadedBirthdays}>
-          {displayBirthdays.map((obj, idx) => (
-            <BirthdayEditorItem
-              idx={idx}
-              name={obj.name}
-              birthday={obj.birthday}
-              status={
-                /*
-                 * key in deleted? -> DELETED
-                 * key not in edited? -> UNCHANGED
-                 * int(key) > maxReferenceFriendID? --> NEW
-                 * else --> EDITED
-                 */
-                editedBirthdays.deleted.has(obj.key)
-                  ? ItemStatus.DELETED
-                  : !(obj.key in editedBirthdays)
-                  ? ItemStatus.UNCHANGED
-                  : parseInt(obj.key, 10) > maxReferenceFriendID
-                  ? ItemStatus.NEW
-                  : ItemStatus.EDITED
+          {currentEdit ? (
+            <div
+              style={{
+                marginTop: '40px',
+                display: 'flex',
+                height: '50%',
+                flexDirection: 'column',
+                justifyContent: 'space-evenly',
+                alignItems: 'center'
+              }}
+            >
+              <span>
+                <span
+                  style={{
+                    color: `${currentEdit.name.length === 0 ? 'red' : 'green'}`,
+                    position: 'relative',
+                    left: '-4px',
+                    top: '-4px'
+                  }}
+                >
+                  *
+                </span>
+                <input
+                  value={currentEdit.name}
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: '#5f92ce',
+                    textAlign: 'center',
+                    fontSize: '1.35em',
+                    border: '1px solid #ced4da',
+                    borderRadius: '.25em'
+                  }}
+                  type='text'
+                  placeholder='Name'
+                  onChange={evt => {
+                    this.setState({
+                      currentEdit: { ...currentEdit, name: evt.target.value }
+                    });
+                  }}
+                />
+              </span>
+              <span>
+                <select
+                  style={{ margin: '5px' }}
+                  value={
+                    months[parseInt(currentEdit.birthday.substring(0, 2)) - 1]
+                  }
+                  onChange={evt => {
+                    const monthStr = (months.indexOf(evt.target.value) + 1)
+                      .toString()
+                      .padStart(2, '0');
 
-                /*
-                obj.key !== "new" && obj.key in editedBirthdays
-                  ? ItemStatus.EDITED
-                  : editedBirthdays.deleted.has(obj.key)
-                  ? ItemStatus.DELETED
-                  : obj.key in referenceBirthdays
-                  ? ItemStatus.UNCHANGED
-                  : ItemStatus.NEW
+                    const birthday =
+                      monthStr +
+                      (parseInt(currentEdit.birthday.substring(2)) > // prevent invalid dates when choosing shorter months
+                      monthLengths[parseInt(monthStr) - 1]
+                        ? monthLengths[parseInt(monthStr) - 1]
+                        : currentEdit.birthday.substring(2));
 
-                */
-              }
-              canEditItem={
-                editMode &&
-                (editFocusFriendID === null || editFocusFriendID === obj.key)
-              }
-              onEditFocus={() => {
-                this.setState({ editFocusFriendID: obj.key });
-              }}
-              editFocused={editFocusFriendID === obj.key}
-              onEditItem={(name, birthday) => {
-                onEdit({
-                  ...editedBirthdays,
-                  [obj.key]: { name, birthday }
-                });
-              }}
-              onDeleteItem={() => {
-                const editedCopy = { ...editedBirthdays };
-                delete editedCopy[obj.key]; // not necessary to check for property existence
-                if (obj.key in referenceBirthdays) {
-                  editedCopy.deleted.add(obj.key);
-                }
-                onEdit(editedCopy);
-              }}
-              onUndoDelete={() => {
-                const editedCopy = { ...editedBirthdays };
-                editedCopy.deleted.delete(obj.key);
-                onEdit(editedCopy);
-              }}
-              onSubmitEdit={editName => {
-                console.log(">>>saving editedBirthdays as", {
-                  ...editedBirthdays,
-                  [obj.key]: { name: editName, birthday: obj.birthday }
-                });
-                onEdit({
-                  ...editedBirthdays,
-                  [obj.key]: { name: editName, birthday: obj.birthday }
-                });
-                this.setState({ editFocusFriendID: null });
-              }}
-              onUndoEdit={() => {
-                this.setState({ editFocusFriendID: null });
-              }}
-            />
-          ))}
+                    this.setState({
+                      currentEdit: {
+                        ...currentEdit,
+                        birthday
+                      }
+                    });
+                  }}
+                >
+                  {months.map((month, idx) => (
+                    <option key={idx}>{month}</option>
+                  ))}
+                </select>
+                <select
+                  style={{ margin: '5px' }}
+                  value={parseInt(currentEdit.birthday.substring(2))}
+                  onChange={evt => {
+                    const birthday =
+                      currentEdit.birthday.substring(0, 2) +
+                      evt.target.value.toString().padStart(2, '0');
+                    this.setState({
+                      currentEdit: {
+                        ...currentEdit,
+                        birthday
+                      }
+                    });
+                  }}
+                >
+                  {[
+                    ...Array(
+                      monthLengths[currentEdit.birthday.substring(0, 2) - 1]
+                    ).keys()
+                  ].map((num, idx) => (
+                    <option key={idx}>{num + 1}</option>
+                  ))}
+                </select>
+              </span>
+              <span>
+                <button
+                  onClick={() => {
+                    this.setState({ currentEdit: null });
+                  }}
+                  style={{
+                    marginRight: '5px',
+                    borderRadius: '.25em'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={currentEdit.name.length === 0}
+                  onClick={() => {
+                    const editedBirthdaysCopy = { ...editedBirthdays };
+                    const { friendID, name, birthday } = currentEdit;
+                    if (
+                      // edited version now matches reference version
+                      friendID in referenceBirthdays &&
+                      name === referenceBirthdays[friendID].name &&
+                      birthday === referenceBirthdays[friendID].birthday
+                    ) {
+                      delete editedBirthdaysCopy[friendID];
+                    } else {
+                      editedBirthdaysCopy[friendID] = {
+                        name,
+                        birthday
+                      };
+                    }
+                    onEdit(editedBirthdaysCopy);
+                    this.setState({ currentEdit: null });
+                  }}
+                  style={{ marginLeft: '5px', borderRadius: '.25em' }}
+                >
+                  OK
+                </button>
+              </span>
+            </div>
+          ) : (
+            <>
+              <div
+                style={{
+                  height: '2.25em',
+                  borderBottom: '1px solid #787e9e',
+                  position: 'absolute',
+                  width: '348px',
+                  backgroundColor: '#1a1e31',
+                  borderRadius: '.5em .5em 0 0',
+                  display: 'flex',
+                  opacity: '.95',
+                  alignItems: 'center'
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    color: 'rgb(120, 126, 158)',
+                    cursor: 'pointer',
+                    width: '75px',
+                    textAlign: 'center',
+                    lineHeight: '2',
+                    borderRight: '1px solid rgb(120, 126, 158)',
+                    backgroundColor: '#1a1e31',
+                    borderRadius: 'inherit'
+                  }}
+                  onClick={() => {
+                    if (editMode) {
+                      this.setState({
+                        editMode: false
+                      });
+                    } else {
+                      this.setState({ editMode: true });
+                    }
+                  }}
+                >
+                  {editMode ? 'Done' : 'Edit'}
+                </span>
+                <input
+                  type='text'
+                  style={{
+                    margin: '8px',
+                    backgroundColor: 'transparent',
+                    color: 'white',
+                    border: 'transparent'
+                  }}
+                  placeholder='Filter by name'
+                  value={filterString}
+                  onChange={evt => {
+                    this.setState({ filterString: evt.target.value });
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '2em',
+                    marginLeft: 'auto',
+                    marginRight: '.3em',
+                    cursor: 'pointer',
+                    marginBottom: '6px'
+                  }}
+                  onClick={() => {
+                    const friendID =
+                      Math.max(
+                        ...Object.keys(editedBirthdays).filter(
+                          key => key !== 'deleted'
+                        ),
+                        maxReferenceFriendID,
+                        -1
+                      ) + 1;
+
+                    this.setState({
+                      currentEdit: { friendID, name: '', birthday: '0101' }
+                    });
+                  }}
+                >
+                  &#8853;
+                </span>
+              </div>
+              <div style={{ height: '2.25em' }} />
+              {displayBirthdays.map(obj => (
+                <BirthdayEditorItem
+                  key={obj.key}
+                  displayName={obj.name}
+                  birthday={obj.birthday}
+                  status={
+                    /*
+                     * key in deleted? -> DELETED
+                     * key not in edited? -> UNCHANGED
+                     * int(key) > maxReferenceFriendID? --> NEW
+                     * else --> EDITED
+                     */
+                    editedBirthdays.deleted.has(obj.key)
+                      ? ItemStatus.DELETED
+                      : !(obj.key in editedBirthdays)
+                      ? ItemStatus.UNCHANGED
+                      : parseInt(obj.key, 10) > maxReferenceFriendID
+                      ? ItemStatus.NEW
+                      : ItemStatus.EDITED
+                  }
+                  editMode={editMode}
+                  onEditFocus={() => {
+                    this.setState({
+                      currentEdit: {
+                        friendID: obj.key,
+                        name: obj.name,
+                        birthday: obj.birthday
+                      }
+                    });
+                  }}
+                  onDeleteItem={() => {
+                    const editedCopy = { ...editedBirthdays };
+                    delete editedCopy[obj.key]; // not necessary to check for property existence
+                    if (obj.key in referenceBirthdays) {
+                      editedCopy.deleted.add(obj.key);
+                    }
+                    onEdit(editedCopy);
+                  }}
+                  onUndoDelete={() => {
+                    const editedCopy = { ...editedBirthdays };
+                    editedCopy.deleted.delete(obj.key);
+                    onEdit(editedCopy);
+                  }}
+                  onUndoEdit={() => {
+                    const editedBirthdaysCopy = { ...editedBirthdays };
+                    delete editedBirthdaysCopy[obj.key];
+                    onEdit(editedBirthdaysCopy);
+                  }}
+                />
+              ))}
+            </>
+          )}
         </span>
-        <span
-          style={{
-            //     border: "1px solid black",
-            display: "inline-block",
-            width: "200px"
-          }}
-        >
-          <div style={{ marginLeft: ".25em" }}>Key:</div>
-          <ul style={{ marginBottom: ".25em" }}>
-            <li style={{ color: "green" }}>birthday to add</li>
-            <li style={{ color: "red" }}>birthday to delete</li>
-            <li style={{ color: "#5f92ce" }}>no change</li>
-          </ul>
+        <span style={{ fontSize: '.85em' }}>
+          <span style={{ color: 'green' }}>to add, </span>
+          <span style={{ color: 'yellow' }}>to modify, </span>
+          <span style={{ color: 'red' }}>to delete, </span>
+          <span style={{ color: 'white' }}>no change</span>
         </span>
       </div>
     );
   }
 }
+
+const months = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+];
+
+const monthLengths = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 BirthdayEditor.propTypes = {
   referenceBirthdays: PropTypes.object,
@@ -182,7 +371,6 @@ BirthdayEditor.propTypes = {
 
 BirthdayEditor.defaultProps = {
   referenceBirthdays: {}
-  //  editedBirthdays: {}
 };
 
 /*
@@ -202,8 +390,8 @@ export const ItemStatus = Object.freeze({
 });
 
 export const StatusColors = Object.freeze({
-  [ItemStatus.NEW]: "green", // can edit or delete (status remains "new")
-  [ItemStatus.EDITED]: "yellow", // can edit (status remains), delete (status to edited), or undo (status to unchanged)
-  [ItemStatus.DELETED]: "red", // can undo (status to unchanged)
-  [ItemStatus.UNCHANGED]: "white" // can edit or delete
+  [ItemStatus.NEW]: 'green', // can edit or delete (status remains "new")
+  [ItemStatus.EDITED]: 'yellow', // can edit (status remains), delete (status to edited), or undo (status to unchanged)
+  [ItemStatus.DELETED]: 'red', // can undo (status to unchanged)
+  [ItemStatus.UNCHANGED]: 'white' // can edit or delete
 });

@@ -1,15 +1,15 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const jwt = require("express-jwt");
-const jwksRsa = require("jwks-rsa");
-const db = require("./data/db");
-const notifications = require("./notifications");
-const utils = require("./utils");
-const scheduler = require("./schedulerFactory");
-const dataAccess = require("./data/data_access");
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const jwt = require('express-jwt');
+const jwksRsa = require('jwks-rsa');
+const db = require('./data/db');
+const notifications = require('./notifications');
+const utils = require('./utils');
+const scheduler = require('./schedulerFactory');
+const dataAccess = require('./data/data_access');
 
 const MODE = db.MODE_TEST;
 
@@ -18,13 +18,13 @@ const app = express();
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(cors());
-app.use(morgan("combined"));
+app.use(morgan('combined'));
 
 db.connect(MODE, function() {
-  console.log("connected to db");
+  console.log('connected to db');
 });
 
-scheduler.start(); // TEMP for testing cron scheduler --> should send me a text every minute
+scheduler.start(); // TEMP for testing cron scheduler --> should send me a text every minute TODO: figure out where scheduler.start() should actually go...seems to be here?
 
 const checkJwt = jwt({
   secret: jwksRsa.expressJwtSecret({
@@ -36,14 +36,14 @@ const checkJwt = jwt({
   }),
 
   // Validate the audience and the issuer.
-  audience: "8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL", // my auth0 client id
+  audience: '8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL', // my auth0 client id
   issuer: `https://dev-ztfv3x1b.auth0.com
   /`, // my auth0 domain
-  algorithms: ["RS256"]
+  algorithms: ['RS256']
 });
 
 // HOW TO USE checkJwt
-app.post("/", checkJwt, (req, res) => {
+app.post('/', checkJwt, (req, res) => {
   // checkJwt an express middleware that validates ID tokens
   const { id, bday } = req.body;
   tempBirthdayDB[id] = bday;
@@ -62,7 +62,7 @@ app.post("/", checkJwt, (req, res) => {
  *  preferences: stringified preferences object
  */
 
-app.post("/users", async (req, res) => {
+app.post('/users', async (req, res) => {
   // TODO: checkJwt makes endpoint only available to authenticated users --> do I want it here?
   const { email, preferences } = req.body;
   try {
@@ -80,12 +80,11 @@ app.post("/users", async (req, res) => {
  * Note: Express sets content-type as 'application/json', since result is an object.
  */
 
-app.get("/users/:email", async (req, res) => {
-  const uriParsed = req.path.split("/");
+app.get('/users/:email', async (req, res) => {
+  const uriParsed = req.path.split('/');
   const email = uriParsed[uriParsed.length - 1];
   try {
     const result = await dataAccess.getUser(email);
-    console.log("queried Users table for friends and preferences for " + email);
     res.send(result);
   } catch (err) {
     res.status(500).send(); // internal server error
@@ -99,8 +98,8 @@ app.get("/users/:email", async (req, res) => {
  * Note: Express sets content-type as 'text/html', since result is a string.
  */
 
-app.get("/users/:userID/preferences", async (req, res) => {
-  const uriParsed = req.path.split("/");
+app.get('/users/:userID/preferences', async (req, res) => {
+  const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   try {
     const result = await dataAccess.getPreferences(userID);
@@ -120,9 +119,9 @@ app.get("/users/:userID/preferences", async (req, res) => {
  *  preferences: JSON stringified preferences object
  */
 
-app.put("/users/:userID/preferences", async (req, res) => {
+app.put('/users/:userID/preferences', async (req, res) => {
   const { preferences } = req.body;
-  const uriParsed = req.path.split("/");
+  const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   try {
     await dataAccess.updatePreferences(userID, preferences);
@@ -135,44 +134,40 @@ app.put("/users/:userID/preferences", async (req, res) => {
 /*
  * Delete User
  *
+ * (this is currently unused)
+ *
  * Removes the given user from the User table, and removes all of user's entries
  * from the Friends table.
  */
 
-app.delete("/users/:email", (req, res) => {
-  const uriParsed = req.path.split("/");
+app.delete('/users/:email', (req, res) => {
+  const uriParsed = req.path.split('/');
   const email = uriParsed[uriParsed.length - 1];
   const pool = db.get();
 
   // look up userID
   pool.query(
-    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";",
+    'SELECT userID FROM Users WHERE email=' + utils.quotesOrNULL(email) + ';',
     (err, result) => {
       if (err) {
         res.status(500).send();
-        throw err;
       }
       const userID = result[0].userID;
-      console.log(">>>userID:", userID);
       // delete entry in User table
       let query =
-        "DELETE FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";";
-      console.log(">>>query:", query);
+        'DELETE FROM Users WHERE email=' + utils.quotesOrNULL(email) + ';';
       pool.query(query, (err, result) => {
         if (err) {
           res.status(500).send();
-          throw err;
         }
         // delete from Friends table
         query =
-          "DELETE FROM Friends WHERE userID=" +
+          'DELETE FROM Friends WHERE userID=' +
           utils.quotesOrNULL(userID) +
-          ";";
-        console.log(">>>query:", query);
+          ';';
         pool.query(query, (err, result) => {
           if (err) {
             res.status(500).send();
-            throw err;
           }
           res.status(200).send();
         });
@@ -182,55 +177,20 @@ app.delete("/users/:email", (req, res) => {
 });
 
 /*
- * Add Friends
- *
- * Updates the Friends table by adding all the entries in the friends object (friendName -> bday)
- * for the given user.
- *
- * Body:
- *  friends: JSON obj mapping name --> birthday (4 char string, MMDD)
+ * set friends
  */
+app.post('/users/:userID/friends', async (req, res) => {
+  const editedBirthdays = req.body;
+  const uriParsed = req.path.split('/');
+  const userID = uriParsed[uriParsed.length - 2];
 
-app.post("/users/:email/friends", (req, res) => {
-  const { friends } = req.body;
-  console.log(">>>friends:", friends);
-  const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-
-  pool.query(
-    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email) + ";",
-    (err, result) => {
-      if (err) {
-        res.status(500).send();
-        throw err;
-      }
-      const userID = result[0].userID;
-      const names = Object.keys(friends);
-      let values = "";
-      for (let i = 0; i < names.length; i++) {
-        values +=
-          "(" +
-          utils.quotesOrNULL(names[i]) +
-          ", " +
-          utils.quotesOrNULL(friends[names[i]]) +
-          ", " +
-          userID +
-          (i < names.length - 1 ? "), " : ")");
-      }
-      const query =
-        "INSERT INTO Friends(name, birthday, userID) VALUES " + values + ";";
-      console.log(">>>query:", query);
-      pool.query(query, (err, result) => {
-        if (err) {
-          console.log(">>>addFriends err", err);
-          res.status(500).send();
-          throw err;
-        }
-        res.status(200).send();
-      });
-    }
-  );
+  try {
+    await dataAccess.addAndUpdateFriends(userID, editedBirthdays);
+    await dataAccess.deleteFriends(editedBirthdays.deleted);
+    res.status(200).send();
+  } catch (err) {
+    res.status(500).send();
+  }
 });
 
 /*
@@ -242,9 +202,9 @@ app.post("/users/:email/friends", (req, res) => {
  *  date: string date, can be null or undefined if no date desired
  */
 
-app.get("/users/:userID/friends", async (req, res) => {
+app.get('/users/:userID/friends', async (req, res) => {
   const { date } = req.body; // if unspecified, return all friends
-  const uriParsed = req.path.split("/");
+  const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   try {
     const result = await dataAccess.getFriends(userID, date);
@@ -255,71 +215,13 @@ app.get("/users/:userID/friends", async (req, res) => {
 });
 
 /*
- * WIP: Modify Friends
- * TODO: do I need this?
- *
- * For the given user, iterates through update object (oldFriendName -> [newName/null, newBday/null]),
- * updating the Friends table for each user/oldFriendName entry.
- */
-
-app.put("/users/:email/friends", (req, res) => {
-  const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-});
-
-/*
- * Delete Friends
- *
- * For the given user, remove entries in Friends specified by the array of friend names.
- *
- * Body:
- *  names: array of string names
- */
-
-app.delete("/users/:email/friends", (req, res) => {
-  const { names } = req.body; // assuming "names" arr in body is non-empty
-  const uriParsed = req.path.split("/");
-  const email = uriParsed[uriParsed.length - 2];
-  const pool = db.get();
-
-  pool.query(
-    "SELECT userID FROM Users WHERE email=" + utils.quotesOrNULL(email),
-    (err, result) => {
-      if (err) {
-        res.status(500).send();
-        throw err;
-      }
-      const userID = result[0].userID;
-      const namesStringified = JSON.stringify(names);
-      const namesStr =
-        "(" + namesStringified.slice(1, namesStringified.length - 1) + ")";
-      const query = // TODO: is this too slow?
-        "DELETE FROM Friends WHERE userID=" +
-        utils.quotesOrNULL(userID) +
-        " AND name IN" +
-        namesStr +
-        ";";
-      console.log(">>>query:", query);
-      pool.query(query, (err, result) => {
-        if (err) {
-          res.status(500).send();
-          throw err;
-        }
-        res.status(200).send();
-      });
-    }
-  );
-});
-
-/*
  * Send notification for date
  *
  * Note: not purely RESTful
  */
 
-app.put("/users/:userID/sendNotification", (req, res) => {
-  const uriParsed = req.path.split("/");
+app.put('/users/:userID/sendNotification', (req, res) => {
+  const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   const errorCallback = () => {
     res.status(500).send();
@@ -336,13 +238,12 @@ app.put("/users/:userID/sendNotification", (req, res) => {
 
 // start server
 app.listen(8081, () => {
-  console.log("listening on port 8081");
+  console.log('listening on port 8081');
 });
 
 /*
  * ASSUMPTIONS:
  * 1. browser protects db from duplicate emails
- * 2. names array in delete friends is non-empty
  *
  * NOTES:
  *

@@ -2,9 +2,17 @@
   display: inline-block;
   height: 350px;
   width: 350px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid #787e9e;
   margin: 0.5em;
   margin-bottom: 0;
   border-radius: 0.5rem;
+  background-color: transparent;
+}
+
+.react-datepicker__input-container input {
+  background-color: transparent;
+  color: rgb(95, 146, 206);
+  text-align: center;
 }

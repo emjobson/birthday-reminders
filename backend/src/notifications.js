@@ -1,7 +1,7 @@
-const Twilio = require("twilio");
-const dotenv = require("dotenv");
-const db = require("./data/db");
-const utils = require("./utils");
+const Twilio = require('twilio');
+const dotenv = require('dotenv');
+const db = require('./data/db');
+const utils = require('./utils');
 dotenv.config();
 
 /*
@@ -20,27 +20,40 @@ exports.gatherAndSendNotifications = function(
 ) {
   const pool = db.get();
   const usersQuery =
-    "SELECT userID, preferences from Users" + // odd to select userID when we might already know it? makes following code simpler
-    (userID ? " WHERE userID='" + userID + "'" : "") +
-    ";";
+    'SELECT userID, preferences from Users' + // odd to select userID when we might already know it? makes following code simpler
+    (userID ? " WHERE userID='" + userID + "'" : '') +
+    ';';
   pool.query(usersQuery, (err, result) => {
     if (err) {
       if (errorCallback) {
         // provided when sendNotifications accessed via html method, as opposed to cron scheduler
         errorCallback();
       }
-      console.log("error querying Users db to send notifications");
-      throw err; // TODO: get rid of these, don't want to crash in prod --> will need to return instead so we don't send multiple error codes
+      console.log('error querying Users db to send notifications');
+      return;
     }
     let promises = [];
     for (let i = 0; i < result.length; i++) {
-      const phoneNumber = JSON.parse(result[i].preferences).phoneNumber;
-      const date = utils.dateString(new Date()); // will later look at preferences to determine correct date
+      const preferences = JSON.parse(result[i].preferences);
+      if (
+        !preferences ||
+        !preferences.phoneNumber ||
+        !preferences.notificationTime
+      ) {
+        // if preferences are incomplete (browser blocks invalid preferences, like incomplete phone number)
+        continue;
+      }
+      const phoneNumber = preferences.phoneNumber;
+      const notificationTime = parseInt(preferences.notificationTime);
+
+      const date = new Date();
+      date.setDate(date.getDate() + notificationTime);
+
       const friendsQuery =
         "SELECT name FROM Friends WHERE userID='" +
         result[i].userID +
         "' AND birthday='" +
-        date +
+        utils.dateString(date) +
         "';";
       const promise = new Promise((resolve, reject) => {
         pool.query(friendsQuery, (err, result) => {
@@ -48,12 +61,15 @@ exports.gatherAndSendNotifications = function(
             if (errorCallback) {
               errorCallback();
             }
-            console.log("error querying Friends db to send notifications");
-            throw err;
+            console.log('error querying Friends db to send notifications');
+            reject();
           }
-          const textMessage = utils.constructReminderText(result);
+          const textMessage = utils.constructReminderText(
+            result,
+            notificationTime
+          );
           resolve({
-            phoneNumber: "+1" + phoneNumber,
+            phoneNumber: '+1' + phoneNumber,
             text: textMessage
           });
         });
@@ -93,7 +109,7 @@ function sendNotifications(notifications, successCallback) {
           notification.phoneNumber.substr(
             0,
             notification.phoneNumber.length - 5
-          ) + "*****";
+          ) + '*****';
         console.log(`Message sent to ${masked}`);
       }
     });
@@ -102,5 +118,5 @@ function sendNotifications(notifications, successCallback) {
     // for sending status 200 if messages were QUEUED
     successCallback();
   }
-  console.log("Messages have been queued for delivery.");
+  console.log('Messages have been queued for delivery.');
 }

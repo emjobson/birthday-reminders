@@ -1,42 +1,43 @@
-import axios from "axios";
-import { BASE_SERVER_URL } from "../constants";
+import axios from 'axios';
+import { BASE_SERVER_URL } from '../constants';
+
+export async function createUser(email) {
+  return await axios.post(BASE_SERVER_URL + '/users', {
+    email: email
+  });
+}
 
 // tested (ONLY getUser and createUser should occur by email --> rest will be tagged with userID)
 export async function getUser(email) {
-  const data = await axios.get(BASE_SERVER_URL + "/users/" + email);
+  const data = await axios.get(BASE_SERVER_URL + '/users/' + email);
   return data.data
     ? { ...data.data, preferences: JSON.parse(data.data.preferences) }
     : null;
 }
 
-// tested
-export async function createUser(email) {
-  return await axios.post(BASE_SERVER_URL + "/users", {
-    email: email
-  });
-}
-
-// done (no dataAccess function needed)
-export async function sendNotification(userID, date) {
-  return await axios.put(
-    BASE_SERVER_URL + "/users/" + userID + "/sendNotification",
-    { date: date }
+// https://github.com/axios/axios/issues/1195, see Legym's comment --> examined request and this endpoint looks fine
+export async function setFriends(userID, editedBirthdays) {
+  const toSend = JSON.stringify(
+    escapeSingleQuotes({
+      ...editedBirthdays,
+      deleted: Array.from(editedBirthdays.deleted)
+    })
   );
-}
-
-// will do this later bc I'm changing it to setFriends (allowing for create/update/delete all at once)
-export async function addFriends(user, friends) {
   return await axios.post(
-    BASE_SERVER_URL + "/users/" + user + "/friends",
-    escapeSingleQuotes({ friends: friends })
+    BASE_SERVER_URL + '/users/' + userID + '/friends',
+    toSend,
+    {
+      headers: {
+        'content-type': 'application/json'
+      }
+    }
   );
 }
 
-// done
 export async function getFriends(userID, date) {
   const data = await axios.get(
     // use "return await" if I want to handle error here, otherwise there's little diff between this and "return"
-    BASE_SERVER_URL + "/users/" + userID + "/friends",
+    BASE_SERVER_URL + '/users/' + userID + '/friends',
     { date: date }
   );
   if (data.data) {
@@ -45,32 +46,28 @@ export async function getFriends(userID, date) {
   return null;
 }
 
+// done (no dataAccess function needed)
+export async function sendNotification(userID, date) {
+  return await axios.put(
+    BASE_SERVER_URL + '/users/' + userID + '/sendNotification',
+    { date: date }
+  );
+}
+
 // done
 export async function updatePreferences(userID, preferences) {
   return await axios.put(
-    BASE_SERVER_URL + "/users/" + userID + "/preferences",
+    BASE_SERVER_URL + '/users/' + userID + '/preferences',
     {
       preferences: JSON.stringify(preferences)
     }
   );
 }
 
-// done
-/*
- * Note: As of 5/26, Axios will always attempt a JSON.parse when the response's data
- * is a string, regardless of content-type.
- *
- * https://github.com/axios/axios/issues/907
- */
-export async function getPreferences(userID) {
-  const data = await axios.get(
-    BASE_SERVER_URL + "/users/" + userID + "/preferences"
-  );
-  return data.data ? data.data : null;
-}
-
 function escapeSingleQuotes(friends) {
   return JSON.parse(JSON.stringify(friends).replace(/'/g, "''"));
+
+  //  return JSON.parse(JSON.stringify(friends).replace(/'/g, "''"));
 }
 
 function unpackServerBirthdays(obj) {

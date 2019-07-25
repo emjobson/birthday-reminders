@@ -1,4 +1,4 @@
-import * as _ from "lodash";
+import * as _ from 'lodash';
 
 /*
  * Takes in a string representing iCal events.
@@ -16,19 +16,17 @@ import * as _ from "lodash";
  * Returns map of name -> bday (string in format YYYYMMDD)
  */
 export function parseICal(ical) {
-  const lines = ical.split("\n");
+  const lines = ical.split('\n');
   const filtered = lines.filter(line => {
-    const label = line.split(":")[0];
-    return label === "DTSTART" || label === "SUMMARY";
+    const label = line.split(':')[0];
+    return label === 'DTSTART' || label === 'SUMMARY';
   });
   const divided = _.partition(
     filtered,
-    line => line.split(":")[0] === "SUMMARY"
+    line => line.split(':')[0] === 'SUMMARY'
   );
   return _.zipObject(
-    divided[0].map(
-      line => line.split(":")[1].slice(0, -12) // TODO: colon in someone's name will mess this up
-    ),
-    divided[1].map(line => line.split(":")[1])
+    divided[0].map(line => line.split(':')[1].slice(0, -12)),
+    divided[1].map(line => line.split(':')[1])
   );
 }
