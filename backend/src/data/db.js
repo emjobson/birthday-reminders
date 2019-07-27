@@ -1,9 +1,7 @@
 const mysql = require('mysql');
 
-const findConfig = require('find-config');
 const dotenv = require('dotenv');
-dotenv.config({ path: findConfig('find-config')('.env') }); // to fix issue with pm2 not finding env variables
-console.log('path to environment variables', findConfig('.env'));
+dotenv.config({ path: require('find-config')('.env') }); // to fix issue with pm2 not finding env variables
 
 // Referenced https://www.terlici.com/2015/08/13/mysql-node-express.html
 

@@ -1,10 +1,8 @@
 const db = require('./db');
 const utils = require('../utils');
 
-const findConfig = require('find-config');
 const dotenv = require('dotenv');
-dotenv.config({ path: findConfig('find-config')('.env') }); // to fix issue with pm2 not finding env variables
-console.log('path to environment variables', findConfig('.env'));
+dotenv.config({ path: require('find-config')('.env') }); // to fix issue with pm2 not finding env variables
 
 db.connect(process.env.DB_MODE, function() {
   console.log('connected to db');
