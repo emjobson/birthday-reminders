@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'backend',
-      script: './backend/src/index.js'
+      script: './src/index.js'
     }
   ],
   deploy: {
@@ -12,7 +12,7 @@ module.exports = {
       key: '~/.ssh/birthdays.pem',
       ref: 'origin/master',
       repo: 'git@github.com:emjobson/birthday-reminders.git',
-      path: '/home/ubuntu/birthday-reminders',
+      path: '/home/ubuntu/birthday-reminders/backend',
       'post-deploy': 'npm install && pm2 startOrRestart ecosystem.config.js'
     }
   }
