@@ -12,7 +12,7 @@ const scheduler = require('./schedulerFactory');
 const dataAccess = require('./data/data_access');
 
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: require('find-config')('.env') }); // to fix issue with pm2 not finding env variables, since it calls index.js from backend, not src
 
 const app = express();
 

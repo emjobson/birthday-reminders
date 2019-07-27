@@ -18,6 +18,7 @@
     "dotenv": "^8.0.0",
     "express": "^4.16.4",
     "express-jwt": "^5.3.1",
+    "find-config": "^1.0.0",
     "helmet": "^3.16.0",
     "jwks-rsa": "^1.4.0",
     "moment": "^2.24.0",
