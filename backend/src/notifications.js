@@ -1,8 +1,9 @@
-const Twilio = require('twilio');
 const dotenv = require('dotenv');
+dotenv.config({ path: require('find-config')('.env') }); // to fix issue with pm2 not finding env variables
+
+const Twilio = require('twilio');
 const db = require('./data/db');
 const utils = require('./utils');
-dotenv.config();
 
 /*
  * Function queries the database and sends relevant notifications to all users (if no user specified),
