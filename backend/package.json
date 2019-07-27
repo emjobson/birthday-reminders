@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "restart": "pm2 startOrRestart ecosystem.config.js",
+    "deploy": "pm2 deploy ecosystem.config.js production"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +24,8 @@
     "morgan": "^1.9.1",
     "mysql": "^2.17.1",
     "twilio": "^3.30.3"
+  },
+  "devDependencies": {
+    "pm2": "^3.5.1"
   }
 }
