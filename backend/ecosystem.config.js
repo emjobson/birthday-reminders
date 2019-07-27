@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'backend',
-      script: './src/index.js'
+      script: './backend/src/index.js'
     }
   ],
   deploy: {
@@ -12,8 +12,9 @@ module.exports = {
       key: '~/.ssh/birthdays.pem',
       ref: 'origin/master',
       repo: 'git@github.com:emjobson/birthday-reminders.git',
-      path: '/home/ubuntu/birthday-reminders/backend',
-      'post-deploy': 'npm install && pm2 startOrRestart ecosystem.config.js'
+      path: '/home/ubuntu/birthday-reminders', // will save contents of entire repo to this path --> this isn't a method of selecting which part of repo to clone
+      'post-deploy':
+        'npm install --prefix ./backend && pm2 startOrRestart ./backend/ecosystem.config.js'
     }
   }
 };
