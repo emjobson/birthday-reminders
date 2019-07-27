@@ -1,14 +1,17 @@
-const mysql = require("mysql");
-const dotenv = require("dotenv");
-dotenv.config();
+const mysql = require('mysql');
+
+const findConfig = require('find-config');
+const dotenv = require('dotenv');
+dotenv.config({ path: findConfig('find-config')('.env') }); // to fix issue with pm2 not finding env variables
+console.log('path to environment variables', findConfig('.env'));
 
 // Referenced https://www.terlici.com/2015/08/13/mysql-node-express.html
 
-const PRODUCTION_DB = "app_prod_database";
-const TEST_DB = "app_test_database";
+const PRODUCTION_DB = 'app_prod_database';
+const TEST_DB = 'app_test_database';
 
-exports.MODE_TEST = "mode_test";
-exports.MODE_PRODUCTION = "mode_production";
+exports.MODE_TEST = 'mode_test';
+exports.MODE_PRODUCTION = 'mode_production';
 
 const state = {
   pool: null,
@@ -27,11 +30,11 @@ exports.connect = function(mode, done) {
   //  const conn = state.pool.getConnection();
   state.pool.query(
     //conn.query(
-    "CREATE TABLE IF NOT EXISTS Users(" +
-      "userID int not null AUTO_INCREMENT," +
-      "email varchar(255) not null," +
-      "preferences varchar(255)," +
-      "PRIMARY KEY (userID));",
+    'CREATE TABLE IF NOT EXISTS Users(' +
+      'userID int not null AUTO_INCREMENT,' +
+      'email varchar(255) not null,' +
+      'preferences varchar(255),' +
+      'PRIMARY KEY (userID));',
     function(err, result) {
       if (err) {
         throw err;
@@ -40,13 +43,13 @@ exports.connect = function(mode, done) {
   );
   state.pool.query(
     //  conn.query(
-    "CREATE TABLE IF NOT EXISTS Friends(" +
-      "friendID int not null AUTO_INCREMENT," +
-      "name varchar(255) not null," +
-      "birthday char(4)," +
-      "userID int not null," +
-      "foreign key (userID) references Users (userID)," +
-      "PRIMARY KEY (friendID));",
+    'CREATE TABLE IF NOT EXISTS Friends(' +
+      'friendID int not null AUTO_INCREMENT,' +
+      'name varchar(255) not null,' +
+      'birthday char(4),' +
+      'userID int not null,' +
+      'foreign key (userID) references Users (userID),' +
+      'PRIMARY KEY (friendID));',
     function(err, result) {
       if (err) {
         throw err;
