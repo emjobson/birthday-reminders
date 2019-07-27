@@ -11,7 +11,8 @@ const utils = require('./utils');
 const scheduler = require('./schedulerFactory');
 const dataAccess = require('./data/data_access');
 
-const MODE = db.MODE_TEST;
+const dotenv = require('dotenv');
+dotenv.config();
 
 const app = express();
 
@@ -20,7 +21,7 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(morgan('combined'));
 
-db.connect(MODE, function() {
+db.connect(process.env.DB_MODE, function() {
   console.log('connected to db');
 });
 
