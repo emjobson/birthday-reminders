@@ -63,7 +63,7 @@ app.post('/', checkJwt, (req, res) => {
  *  preferences: stringified preferences object
  */
 
-app.post('/users', async (req, res) => {
+app.post('/api/users', async (req, res) => {
   // TODO: checkJwt makes endpoint only available to authenticated users --> do I want it here?
   const { email, preferences } = req.body;
   try {
