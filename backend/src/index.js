@@ -81,7 +81,7 @@ app.post('/api/users', async (req, res) => {
  * Note: Express sets content-type as 'application/json', since result is an object.
  */
 
-app.get('/users/:email', async (req, res) => {
+app.get('/api/users/:email', async (req, res) => {
   const uriParsed = req.path.split('/');
   const email = uriParsed[uriParsed.length - 1];
   try {
@@ -99,7 +99,7 @@ app.get('/users/:email', async (req, res) => {
  * Note: Express sets content-type as 'text/html', since result is a string.
  */
 
-app.get('/users/:userID/preferences', async (req, res) => {
+app.get('/api/users/:userID/preferences', async (req, res) => {
   const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   try {
@@ -120,7 +120,7 @@ app.get('/users/:userID/preferences', async (req, res) => {
  *  preferences: JSON stringified preferences object
  */
 
-app.put('/users/:userID/preferences', async (req, res) => {
+app.put('/api/users/:userID/preferences', async (req, res) => {
   const { preferences } = req.body;
   const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
@@ -141,7 +141,7 @@ app.put('/users/:userID/preferences', async (req, res) => {
  * from the Friends table.
  */
 
-app.delete('/users/:email', (req, res) => {
+app.delete('/api/users/:email', (req, res) => {
   const uriParsed = req.path.split('/');
   const email = uriParsed[uriParsed.length - 1];
   const pool = db.get();
@@ -180,7 +180,7 @@ app.delete('/users/:email', (req, res) => {
 /*
  * set friends
  */
-app.post('/users/:userID/friends', async (req, res) => {
+app.post('/api/users/:userID/friends', async (req, res) => {
   const editedBirthdays = req.body;
   const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
@@ -203,7 +203,7 @@ app.post('/users/:userID/friends', async (req, res) => {
  *  date: string date, can be null or undefined if no date desired
  */
 
-app.get('/users/:userID/friends', async (req, res) => {
+app.get('/api/users/:userID/friends', async (req, res) => {
   const { date } = req.body; // if unspecified, return all friends
   const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
@@ -221,7 +221,7 @@ app.get('/users/:userID/friends', async (req, res) => {
  * Note: not purely RESTful
  */
 
-app.put('/users/:userID/sendNotification', (req, res) => {
+app.put('/api/users/:userID/sendNotification', (req, res) => {
   const uriParsed = req.path.split('/');
   const userID = uriParsed[uriParsed.length - 2];
   const errorCallback = () => {
