@@ -3,3 +3,4 @@ backend/node_modules
 .vscode
 backend/.env
 frontend/src/res
+frontend/.env
