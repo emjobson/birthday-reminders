@@ -1,14 +1,16 @@
-import auth0 from "auth0-js";
+import auth0 from 'auth0-js';
+import { BASE_SITE_URL } from './constants';
 
 class Auth {
   constructor() {
     this.auth0 = new auth0.WebAuth({
-      domain: "dev-ztfv3x1b.auth0.com",
-      audience: "https://dev-ztfv3x1b.auth0.com/userinfo",
-      clientID: "8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL",
-      redirectUri: "http://localhost:3000/callback",
-      responseType: "id_token",
-      scope: "openid profile"
+      domain: 'dev-ztfv3x1b.auth0.com',
+      audience: 'https://dev-ztfv3x1b.auth0.com/userinfo',
+      clientID: '8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL',
+      //    redirectUri: "http://localhost:3000/callback",
+      redirectUri: BASE_SITE_URL + '/callback',
+      responseType: 'id_token',
+      scope: 'openid profile'
     });
 
     this.getProfile = this.getProfile.bind(this);
@@ -62,8 +64,10 @@ class Auth {
 
   signOut() {
     this.auth0.logout({
-      returnTo: "http://localhost:3000",
-      clientID: "8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL"
+      //  returnTo: 'http://localhost:3000',
+      returnTo: BASE_SITE_URL,
+
+      clientID: '8tEnAcZ7XdMQFb2NWTI6KcC27W90qVOL'
     });
     /*
     this.idToken = null;
